@@ -20,8 +20,6 @@ solv = '''\
 sigma = 0.001
 
 #dict for layer types, used to generate caffe network def files
-#TODO add python layer from tako
-#TODO this works, right?
 layer_dict = {"input":'''\
                         input: "{0.ident}"
                         input_shape: {{
@@ -31,18 +29,6 @@ layer_dict = {"input":'''\
                           dim: {0.nodes}
                         }}
                         ''',
-              "STMlayer":'''\
-                            layer {{
-                              name: "{0.ident}"
-                              type: "Python"
-                              bottom: "{0.inputs[0]}"
-                              top: "{0.ident}"
-                              python_param {{
-                                module: "tako"
-                                layer: "STMlayer"
-                              }}
-                            }}
-                            ''',
                 "concat": '''\
                             layer {{
                               name: "{0.ident}"
@@ -90,7 +76,7 @@ layer_dict = {"input":'''\
 #2 is probability of a mutation rate mutation
 #3 is probability of a number of nodes mutation
 #4 is probability of a duplication mutation
-#5 is probability of an add input mutation
+#5 is probability of an add input mutation (currently not implemented)
 #this can be changed, but numbers should add up to ~1
 #(or mutations will not happen correctly)
 #TODO - check that?
@@ -268,7 +254,6 @@ class genome(object):
         #TODO make replaceable with other solvers
         solver = caffe.AdaDeltaSolver('temp_solver.txt')
         os.remove('temp_solver.txt')
-        #TODO test this
         if delete == True:
             os.remove(ident_file)
         #deal with concats and weights
@@ -833,8 +818,6 @@ class layer_gene(gene):
 
     #a function that produces the string a gene makes for the caffe file
     def read_out(self):
-        #TODO test this
-        #STM layer can be added from tako genetics file
         result = dedent(layer_dict[self.layer_type].format(self))
         return result
 

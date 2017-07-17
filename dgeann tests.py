@@ -129,7 +129,7 @@ class testLayer(unittest.TestCase):
                                           ["concat_0"], 6, "IP")
         self.loss = dgeann.layer_gene(5, False, False, 0, "loss",
                                         ["action", "reward"], 5, "loss")
-
+        
     def test_makestring(self):
         test_data = dedent("""\
                             input: \"data\"
@@ -244,6 +244,7 @@ class testLayer(unittest.TestCase):
         test_i = self.low_dom_a.read("temp_file.txt", self.active_list,
                                      concat_dict, self.no_inputs)
         self.assertEqual(test_i, {"cake": 5, "onion": 7, "uvwx": 3})
+        os.remove("temp_file.txt")
         
         
     def test_mutate(self):
