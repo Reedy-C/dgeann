@@ -25,7 +25,7 @@ class testWeight(unittest.TestCase):
                                               3.00, 5, 0, "testa", "testb")
         self.mut_rate = dgeann.weight_gene(1, True, False, .99, "asld",
                                             3.00, 5, 0, "testa", "testb")
-        self.mut_dom = dgeann.weight_gene(1, True, False, .166, "asld",
+        self.mut_dom = dgeann.weight_gene(1, True, False, .35, "asld",
                                            3.00, 5, 0, "testa", "testb")
         dgeann.random.seed("vigor")
 
@@ -72,17 +72,21 @@ class testWeight(unittest.TestCase):
         test_no_mut = self.mut_dom.mutate()
         self.assertEqual(test_no_mut, "")
         #case where mut is on, roll lower than rate (dom changes)
+        dgeann.random.seed("vigor")
+        dgeann.random.random()
+        dgeann.random.random()
+        dgeann.random.random()
         test_dom_mut = self.mut_dom.mutate()
         self.assertEqual(test_dom_mut, "Dom, 1")
         #case where weight changes
         test_weight_mut = self.mut_weight.mutate()
-        self.assertEqual(test_weight_mut, "Weight, 0.255821098441")
+        self.assertEqual(test_weight_mut, "Weight, -0.05954510163836234")
         #case where rate changes
         dgeann.random.random()
         dgeann.random.random()
         dgeann.random.random()
         test_rate_mut = self.mut_rate.mutate()
-        self.assertEqual(test_rate_mut, "Rate, 1.48090320008e-05")
+        self.assertEqual(test_rate_mut, "Rate, -0.000140099362110361")
 
 #tests that layer genes read and mutate properly
 class testLayer(unittest.TestCase):
@@ -223,7 +227,7 @@ class testLayer(unittest.TestCase):
         #a case where they have the same dom
         test_d = self.low_dom_a.read("temp_file.txt", self.active_list,
                                      concat_dict, self.low_dom_b)
-        self.assertEqual(test_d, {"cake": 5, "onion": 7, "abcd": 4})
+        self.assertEqual(test_d, {"cake": 5, "onion": 7, "efgh": 1})
         #a case where the first dominates
         test_e = self.high_dom.read("temp_file.txt", self.active_list,
                                     concat_dict, self.low_dom_a)
@@ -254,25 +258,22 @@ class testLayer(unittest.TestCase):
         dgeann.random.random()
         dgeann.random.random()
         test_mut_dom = self.mut_dom.mutate()
-        self.assertEqual(test_mut_dom, "Dom, -1")
+        self.assertEqual(test_mut_dom, "Dom, 1")
         dgeann.random.seed("vigor")
-        i = 0
-        while i != 4:
-            dgeann.random.random()
-            i += 1
         test_mut_rate = self.mut_rate.mutate()
-        self.assertEqual(test_mut_rate, "Rate, 2.74921171381e-05")
-        i = 0
-        while i != 6:
-            dgeann.random.random()
-            i += 1
+        self.assertEqual(test_mut_rate, "Rate, 1.0064147264152894e-05")
+        dgeann.random.random()
+        dgeann.random.random()
         test_mut_num = self.mut_num.mutate()
-        self.assertEqual(test_mut_num, "Nodes, -1")
+        self.assertEqual(test_mut_num, "Nodes, 1")
+        dgeann.random.random()
+        dgeann.random.random()
         dgeann.random.random()
         test_mut_dup = self.mut_dup.mutate()
         self.assertEqual(test_mut_dup, "Duplicate,")
+        dgeann.random.seed("vigor")
         i = 0
-        while i != 6:
+        while i != 7:
             dgeann.random.random()
             i += 1
         test_mut_input = self.mut_add_input.mutate()
@@ -352,7 +353,7 @@ class testBuild(unittest.TestCase):
     def test_gen_ident(self):
         dgeann.random.seed("genetic")
         ident = dgeann.genome.generate_ident()
-        self.assertEqual(ident, "T780-898-895")
+        self.assertEqual(ident, "T125-659-499")
 
     def test_adjust_weights(self):
         testa = dgeann.weight_gene(1, False, False, 0.0, "a", -0.06807647, 0, 0,
@@ -541,7 +542,7 @@ class testBuild(unittest.TestCase):
     def test_build(self):
         dgeann.random.seed("genetic")
         solv = self.test_genome_a.build(delete=False)
-        x = os.path.join('Gen files', 'T780-898-895.gen')
+        x = os.path.join('Gen files', 'T125-659-499.gen')
         os.remove(x)
         data = solv.net.params['action'][0].data
         self.assertAlmostEqual(data[0][0], 2.50)
@@ -574,7 +575,7 @@ class testBuild(unittest.TestCase):
         solv = concat_genome.build(delete=False)
         data_u = solv.net.params['IPu'][0].data
         data_o = solv.net.params['IPo'][0].data        
-        x = os.path.join('Gen files', 'T431-739-965.gen')
+        x = os.path.join('Gen files', 'T682-469-633.gen')
         os.remove(x)
         self.assertAlmostEqual(data_u[0][0], 3.00)
         self.assertAlmostEqual(data_u[0][5], 5.00)
@@ -589,7 +590,7 @@ class testMutation(unittest.TestCase):
 
     def test_new_ident(self):
         ident = dgeann.genome.new_ident()
-        self.assertEqual(ident, "YCWGNL")
+        self.assertEqual(ident, "QXLPYG")
 
     def test_new_input(self):
         test_layer_b = dgeann.layer_gene(4, True, True, .01, "INa",
@@ -606,17 +607,20 @@ class testMutation(unittest.TestCase):
         test_layer_d = dgeann.layer_gene(4, True, True, .01, "INu",
                                         [], 5, "IP")
         test_genome_b = dgeann.genome([test_layer_b, test_layer_c, test_layer_d],
-                                        [test_dup_layer, test_layer_b, test_layer_c,
-                                         test_layer_d], [], [])
-        x = test_genome_b.new_input(test_genome_b.layerchr_b[0], test_genome_b.layerchr_b)
-        self.assertEqual("INa", x.ident)
+                                        [test_dup_layer, test_layer_b,
+                                         test_layer_c, test_layer_d], [], [])
+        x = test_genome_b.new_input(test_genome_b.layerchr_b[0],
+                                    test_genome_b.layerchr_b)
+        
+        self.assertEqual("INi", x.ident)
         #test with concats and loss layer at end
         test_concat_layer = dgeann.layer_gene(4, True, True, .01, "conc", [], 5, "concat")
         test_loss_layer = dgeann.layer_gene(4, True, True, .01, "loss", [], 5, "loss")
         test_genome_c = dgeann.genome([test_layer_b, test_concat_layer, test_loss_layer],
                                         [test_dup_layer, test_layer_b, test_concat_layer,
                                          test_loss_layer], [], [])
-        x = test_genome_c.new_input(test_genome_c.layerchr_b[0], test_genome_c.layerchr_b)
+        x = test_genome_c.new_input(test_genome_c.layerchr_b[0],
+                                    test_genome_c.layerchr_b)
         self.assertEqual(x.ident, "INa")
 
     def test_find_n_inputs(self):
@@ -1019,29 +1023,30 @@ class testMutation(unittest.TestCase):
         #more complicated case where different numbers of weights are needed
         #for different layers
         test_dup.layerchr_b.append(dgeann.layer_gene(5, False, False, 3,
-                                                       "TEST2", ["YCWGNL"], 1,
+                                                       "TEST2", ["QXLPYG"], 1,
                                                        "IP"))
         for i in range(7):
             test_dup.weightchr_b.append(dgeann.weight_gene(5, True, True, .01,
                                                              str(i), 3, i, 0,
-                                                             "YCWGNL", "TEST2"))
+                                                             "QXLPYG", "TEST2"))
         test_dup.handle_mutation("Nodes, 2", test_dup.layerchr_b[1],
                                 test_dup.layerchr_b)
         self.assertEqual(test_dup.layerchr_b[1].nodes, 8)
         self.assertEqual(len(test_dup.weightchr_b), 56)
         
     def test_mutate(self):
+        dgeann.random.seed("genetic1")
         wgene_0 = dgeann.weight_gene(5, True, False, 1.0, "au00",
                                       3.00, 0, 0, "INa", "IPu")
         wgene_1 = dgeann.weight_gene(5, True, False, 1.0, "au00",
                                       3.00, 0, 0, "INa", "IPu")
-        wgene_2 = dgeann.weight_gene(5, True, False, .166, "au00",
+        wgene_2 = dgeann.weight_gene(5, True, False, .066, "au00",
                                       3.00, 0, 0, "INa", "IPu")
         wgene_3 = dgeann.weight_gene(5, False, False, 1.0, "au00",
                                       3.00, 0, 0, "INa", "IPu")
-        wgene_4 = dgeann.weight_gene(5, True, False, .33, "au00",
+        wgene_4 = dgeann.weight_gene(5, True, False, 1.0, "au04",
                                       3.00, 0, 0, "INa", "IPu")
-        wgene_5 = dgeann.weight_gene(5, True, False, .33, "au00",
+        wgene_5 = dgeann.weight_gene(5, True, False, 1.0, "au05",
                                       3.00, 0, 0, "INa", "IPu")
         test_genome = dgeann.genome([],[], [wgene_0, wgene_1, wgene_2],
                                       [wgene_3, wgene_4, wgene_5])
@@ -1050,7 +1055,7 @@ class testMutation(unittest.TestCase):
         self.assertNotEqual(wgene_1.weight, 3.00)
         self.assertEqual(wgene_2.weight, 3.00)
         self.assertEqual(wgene_2.dom, 5)
-        self.assertEqual(wgene_2.mut_rate, 0.166)
+        self.assertEqual(wgene_2.mut_rate, 0.066)
         self.assertEqual(wgene_3.weight, 3.00)
         self.assertEqual(wgene_3.dom, 5)
         self.assertEqual(wgene_3.mut_rate, 1.0)
@@ -1258,8 +1263,8 @@ class testRecombination(unittest.TestCase):
             self.assertEqual(recomb_a.weightchr_b[x].ident,
                              self.genome_a.weightchr_b[x].ident)
         recomb_b = self.genome_a.recombine(self.genome_k)
-        self.assertEqual(len(recomb_b.layerchr_b), 6)
-        self.assertEqual(len(recomb_b.layerchr_a), 5)
+        self.assertEqual(len(recomb_b.layerchr_b), 5)
+        self.assertEqual(len(recomb_b.layerchr_a), 6)
         self.assertEqual(len(recomb_b.weightchr_a), 4)
         self.assertEqual(len(recomb_b.weightchr_b), 8)
         for gene in recomb_b.weightchr_a:

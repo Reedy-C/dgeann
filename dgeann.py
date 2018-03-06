@@ -958,7 +958,6 @@ class weight_gene(gene):
                 result = self.determine_mutation()
                 return result
 
-    #TODO test
     def determine_mutation(self):
         roll = random.random()
         if roll < weight_mut_probs[0]:
@@ -979,7 +978,6 @@ class weight_gene(gene):
             #change mutation rate
             change = 0
             while change == 0:
-                #TODO test
                 change = random.gauss(0, sigma)
                 while change + self.mut_rate > 1 or change + self.mut_rate <= 0:
                     change = random.gauss(0, sigma)
