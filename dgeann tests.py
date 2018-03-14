@@ -582,6 +582,123 @@ class testBuild(unittest.TestCase):
         self.assertAlmostEqual(data_o[0][0], 3.00)
         self.assertAlmostEqual(data_o[0][5], 5.00)
 
+
+#tests the function to turn random network weights into genes
+class testRandGenes(unittest.TestCase):
+
+    def setUp(self):
+        dgeann.random.seed("vigor")
+        lay = [dgeann.layer_gene(1, False, False, 0, "a", [], 2, "input"),
+               dgeann.layer_gene(1, False, False, 0, "h", ["a"], 2, "IP")]
+        #simple case
+        self.simp_genome = dgeann.genome(lay, lay, [], [])
+        #stacked concats case
+        layers = [dgeann.layer_gene(1, False, False, 0, "a", [], 2, "input"),
+                  dgeann.layer_gene(1, False, False, 0, "b", [], 2, "input"),
+                  dgeann.layer_gene(1, False, False, 0, "c", [], 2, "input"),
+                  dgeann.layer_gene(1, False, False, 0, "d", [], 2, "input"),
+                  dgeann.layer_gene(1, False, False, 0, "e", ["a", "b"],
+                                    None, "concat"),
+                  dgeann.layer_gene(1, False, False, 0, "f", ["c", "d"],
+                                    None, "concat"),
+                  dgeann.layer_gene(1, False, False, 0, "g", ["e", "f"],
+                                    None, "concat"),
+                  dgeann.layer_gene(1, False, False, 0, "h", ["g"], 2, "IP")]
+        self.concats_genome = dgeann.genome(layers, layers, [], [])
+
+    def test_rand2genes(self):
+        net = self.simp_genome.build().net
+        self.simp_genome.net = net
+        key = "h"
+        d = net.params[key][0].data
+        self.simp_genome.weightchr_a = []
+        self.simp_genome.weightchr_b = []
+        self.simp_genome.rand_weight_genes(net, {})
+        self.assertEqual(len(self.simp_genome.weightchr_a), 4)
+        self.assertEqual(len(self.simp_genome.weightchr_b), 4)
+        i = 0
+        j = 0
+        for gen in self.simp_genome.weightchr_a:
+            self.assertEqual(gen.in_node, j)
+            self.assertEqual(gen.out_node, i)
+            a = d[j][i]
+            self.assertAlmostEqual(gen.weight, a)
+            i += 1
+            if i == 2:
+                i = 0
+                j += 1
+                
+        concat_dict = {"b": ["e", 2, "h"], "d": ["f", 2, "h"],
+                       "f": ["g", None, "h"]}
+        net = self.concats_genome.build().net
+        self.concats_genome.net = net
+        d = net.params[key][0].data
+        self.concats_genome.weightchr_a = []
+        self.concats_genome.weightchr_b = []
+        self.concats_genome.rand_weight_genes(net, concat_dict)
+        self.assertEqual(len(self.concats_genome.weightchr_a), 16)
+        i = 0
+        j = 0
+        off_dict = {"a": 0, "b": 2, "c": 4, "d": 6}
+        for gen in self.concats_genome.weightchr_a:
+            self.assertEqual(gen.in_node, j)
+            self.assertEqual(gen.out_node, i)
+            a = d[j][i+off_dict[gen.in_layer]]
+            self.assertAlmostEqual(gen.weight, a)
+            i += 1
+            if i == 2:
+                i = 0
+                j += 1
+            if j == 2:
+                j = 0
+
+    def test_create_rweights(self):
+        net = self.simp_genome.build().net
+        key = "h"
+        d = net.params[key][0].data
+        self.simp_genome.weightchr_a = []
+        self.simp_genome.weightchr_b = []
+        off = self.simp_genome.create_rweights("a", d, "h", net)
+        self.assertEqual(off, 2)
+        self.assertEqual(len(self.simp_genome.weightchr_a), 4)
+        self.assertEqual(len(self.simp_genome.weightchr_b), 4)
+        i = 0
+        j = 0
+        for gen in self.simp_genome.weightchr_a:
+            self.assertEqual(gen.in_node, j)
+            self.assertEqual(gen.out_node, i)
+            a = d[j][i]
+            self.assertAlmostEqual(gen.weight, a)
+            i += 1
+            if i == 2:
+                i = 0
+                j += 1
+
+    def test_concat_rweights(self):
+        net = self.concats_genome.build().net
+        key = "h"
+        d = net.params[key][0].data
+        concat_dict = {"b": ["e", 2, "h"], "d": ["f", 2, "h"],
+                       "f": ["g", None, "h"]}
+        self.concats_genome.weightchr_a = []
+        self.concats_genome.weightchr_b = []
+        self.concats_genome.concat_rweights(net, "g", d, key, concat_dict)
+        self.assertEqual(len(self.concats_genome.weightchr_a), 16)
+        i = 0
+        j = 0
+        off_dict = {"a": 0, "b": 2, "c": 4, "d": 6}
+        for gen in self.concats_genome.weightchr_a:
+            self.assertEqual(gen.in_node, j)
+            self.assertEqual(gen.out_node, i)
+            a = d[j][i+off_dict[gen.in_layer]]
+            self.assertAlmostEqual(gen.weight, a)
+            i += 1
+            if i == 2:
+                i = 0
+                j += 1
+            if j == 2:
+                j = 0
+
 #tests the genome mutation functions
 class testMutation(unittest.TestCase):
 
