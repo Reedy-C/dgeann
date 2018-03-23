@@ -621,7 +621,7 @@ class testRandGenes(unittest.TestCase):
         for gen in self.simp_genome.weightchr_a:
             self.assertEqual(gen.in_node, j)
             self.assertEqual(gen.out_node, i)
-            a = d[j][i]
+            a = d[i][j]
             self.assertAlmostEqual(gen.weight, a)
             i += 1
             if i == 2:
@@ -643,7 +643,7 @@ class testRandGenes(unittest.TestCase):
         for gen in self.concats_genome.weightchr_a:
             self.assertEqual(gen.in_node, j)
             self.assertEqual(gen.out_node, i)
-            a = d[j][i+off_dict[gen.in_layer]]
+            a = d[i][j+off_dict[gen.in_layer]]
             self.assertAlmostEqual(gen.weight, a)
             i += 1
             if i == 2:
@@ -667,7 +667,7 @@ class testRandGenes(unittest.TestCase):
         for gen in self.simp_genome.weightchr_a:
             self.assertEqual(gen.in_node, j)
             self.assertEqual(gen.out_node, i)
-            a = d[j][i]
+            a = d[i][j]
             self.assertAlmostEqual(gen.weight, a)
             i += 1
             if i == 2:
@@ -690,7 +690,7 @@ class testRandGenes(unittest.TestCase):
         for gen in self.concats_genome.weightchr_a:
             self.assertEqual(gen.in_node, j)
             self.assertEqual(gen.out_node, i)
-            a = d[j][i+off_dict[gen.in_layer]]
+            a = d[i][j+off_dict[gen.in_layer]]
             self.assertAlmostEqual(gen.weight, a)
             i += 1
             if i == 2:

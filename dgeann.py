@@ -467,8 +467,8 @@ class genome(object):
                     list(net._bottom_ids(list(net._layer_names).index(key)))[0]]
                 #now see if this is in concat_dict?
                 conc = False
-                for key in concat_dict:
-                    if concat_dict[key][0] == in_layer:
+                for zed in concat_dict:
+                    if concat_dict[zed][0] == in_layer:
                         #then input is from a concat layer
                         conc = True
                         break
@@ -520,11 +520,11 @@ class genome(object):
     def create_rweights(self, in_layer, d, out_layer, net, off=0):
         limit = net.blobs[in_layer].data.shape[3]
         new_off = off
-        #i is the output number/node
-        for i in range(len(d)):
-            #j is the input number/node
-            for j in range(limit):
-                weight = d[i][j+off]
+        #i is the input number/node
+        for i in range(limit):
+            #j is the output number/node
+            for j in range(len(d)):
+                weight = d[j][i+off]
                 w_gene = weight_gene(random.randint(1, 5), True, False,
                                      def_mut_rate, self.new_ident(), weight,
                                      i, j, in_layer, out_layer)
