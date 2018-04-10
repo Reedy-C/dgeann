@@ -23,6 +23,11 @@ sigma = 0.001
 #default mutation rate used for turning random weights into weight genes
 def_mut_rate = 0.01
 
+#constrains crossover in to try and not break network substructures
+#not sure if necessary?
+#TODO test further
+constrain_crossover = True
+
 #dict for layer types, used to generate caffe network def files
 layer_dict = {"input":'''\
                         input: "{0.ident}"
@@ -130,8 +135,14 @@ class genome(object):
 
     #crosses over every pair of chromosomes
     #returns a new genome
+    #n = last possible point of crossover for layer chros
+    #m = last possible point of crossover for weight chros
     def crossover(self):
-        n, m = self.last_shared()
+        if constrain_crossover:
+            n, m = self.last_shared()
+        else:
+            n = min(len(self.layerchr_a)-1, len(self.layerchr_b)-1)
+            m = min(len(self.weightchr_a)-1, len(self.weightchr_b)-1)
         lay_cross = random.randint(1, n)
         layer_a = []
         layer_b = []
@@ -518,7 +529,10 @@ class genome(object):
     #creates and appends all weight genes
     #d is the weight array of the OUTPUT layer
     def create_rweights(self, in_layer, d, out_layer, net, off=0):
-        limit = net.blobs[in_layer].data.shape[3]
+        if len(net.blobs[in_layer].data.shape) == 4:
+            limit = net.blobs[in_layer].data.shape[3]
+        else:
+            limit = net.blobs[in_layer].data.shape[1]
         new_off = off
         #i is the input number/node
         for i in range(limit):
@@ -1094,3 +1108,26 @@ class weight_gene(gene):
                     change = random.gauss(0, sigma)
             result = "Rate, " + str(change)
         return result
+
+
+class haploid_genome(genome):
+
+    def __init__(self, layerchr, weightchr):
+        super().__init__(layerchr, [], weightchr, [])
+
+    def recombine(self, other_genome):
+        #first, do 'crossover' b/w the two genomes
+        #hm... could we cheat here real quick:
+        self.layerchr_b = other_genome.layerchr_a
+        self.weightchr_b = other_genome.weightchr_a
+        result = self.crossover()
+        self.layerchr_b = []
+        self.weightchr_b = []
+        #then randomly pick one possible child
+        layers = random.sample([result.layerchr_a, result.layerchr_b], 1)
+        weights = random.sample([result.weightchr_a, result.weightchr_b], 1)
+        layers = layers[0]
+        weights = weights[0]
+        child = haploid_genome(layers, weights)
+        child.mutate()
+        return child
