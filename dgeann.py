@@ -8,7 +8,7 @@ import numpy
 #default solver
 solv = '''\
         net: "{0}"
-        solver_type: ADADELTA
+        type: "AdaDelta"
         momentum: 0.95
         base_lr: 0.2
         lr_policy: "step"
@@ -70,7 +70,7 @@ layer_dict = {"input":'''\
                           top: "{0.ident}"
                         }}
                         ''',
-            "loss": '''\
+                "loss": '''\
                     layer {{
                       name: "{0.ident}"
                       type: "EuclideanLoss"
@@ -98,6 +98,9 @@ layer_mut_probs = (0.333, 0.234, 0.167, 0.133, 0.133)
 #3 is probability of a mutation rate mutation
 weight_mut_probs = (0.833, 0.117, 0.05)
 
+#toggles recording of mutations in child from parents
+record_muts = True
+
         
 class genome(object):
 
@@ -107,11 +110,13 @@ class genome(object):
     #(which may have different genes on them)
     #chromosome 1: layer genes
     #chromosome 2: weight genes
+    #mut_record: record of mutations from parents, if toggled
     def __init__(self, layerchr_a, layerchr_b, weightchr_a, weightchr_b):
         self.layerchr_a = layerchr_a
         self.layerchr_b = layerchr_b
         self.weightchr_a = weightchr_a
         self.weightchr_b = weightchr_b
+        self.mut_record = []
 
     #recombine takes two genomes (this and one other)
     #and produces a new mixed-up child genome
@@ -540,7 +545,7 @@ class genome(object):
             for j in range(len(d)):
                 weight = d[j][i+off]
                 w_gene = weight_gene(random.randint(1, 5), True, False,
-                                     def_mut_rate, self.new_ident(), weight,
+                                     def_mut_rate, genome.new_ident(), weight,
                                      i, j, in_layer, out_layer)
                 self.weightchr_a.append(w_gene)
                 w_gene.dom = random.randint(1, 5)
@@ -553,22 +558,26 @@ class genome(object):
         for layer in self.layerchr_a:
             result = layer.mutate()
             if result is not "":
-                self.handle_mutation(result, layer)
+                self.handle_mutation(result, layer, "a", self.layerchr_a)
         for layer in self.layerchr_b:
             result = layer.mutate()
             if result is not "":
-                self.handle_mutation(result, layer)
+                self.handle_mutation(result, layer, "b", self.layerchr_b)
         for weight in self.weightchr_a:
             result = weight.mutate()
             if result is not "":
-                self.handle_mutation(result, weight)
+                self.handle_mutation(result, weight, "a", self.weightchr_a)
         for weight in self.weightchr_b:
             result = weight.mutate()
             if result is not "":
-                self.handle_mutation(result, weight)
+                self.handle_mutation(result, weight, "b", self.weightchr_b)
 
     #implements changes to genes from mutations
-    def handle_mutation(self, result, gene, chro=None):
+    def handle_mutation(self, result, gene, c, chro=None):
+        #this could be more complicated to take into account whether
+        #the mutation actually changes anything, but keeping it simple for now
+        if record_muts:
+            self.mut_record.append([c, gene.ident, result])
         val = result[(result.index(",") + 2)::]
         if result[0:3] == "Rat":
             val = float(val)
@@ -662,7 +671,8 @@ class genome(object):
             for i in range(in_dict[layer]):
                 for j in range(new_gene.nodes):
                     w = weight_gene(random.randint(1,5),
-                                    True, False, 3, genome.new_ident(),
+                                    True, False, def_mut_rate,
+                                    genome.new_ident(),
                                     weight, i, j, layer, new_gene.ident)
                     new_weights.append(w)
         #then from new gene -> the gene that now takes it as input
@@ -671,7 +681,8 @@ class genome(object):
                 inputs, d = self.find_n_inputs(out_gene, chro)
                 weight = 1/inputs
                 w = weight_gene(random.randint(1,5),
-                                True, False, 3, genome.new_ident(),
+                                True, False, def_mut_rate,
+                                genome.new_ident(),
                                 weight, i, j, new_gene.ident, out_gene.ident)
                 new_weights.append(w)
         #and lastly stick it all in the weight chromosome
@@ -780,7 +791,8 @@ class genome(object):
                         for j in range(out_dict[g.out_layer].nodes):
                             w = random.gauss(0, var)
                             weight = weight_gene(random.randint(1, 5), True,
-                                                 False, 3, genome.new_ident(),
+                                                 False, def_mut_rate,
+                                                 genome.new_ident(),
                                                  w, (i + g.in_node + 1),
                                                  j, gene.ident,
                                                  g.out_layer)
@@ -801,7 +813,8 @@ class genome(object):
                         for i in range(new):
                             w = random.gauss(0, var)
                             weight = weight_gene(random.randint(1, 5), True,
-                                                 False, 3, genome.new_ident(), w,
+                                                 False, def_mut_rate,
+                                                 genome.new_ident(), w,
                                                  g.in_node, (i + g.out_node + 1),
                                                  g.in_layer, gene.ident)
                             weight_chr.insert(ind, weight)
