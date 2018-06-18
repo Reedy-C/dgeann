@@ -33,20 +33,18 @@ layer_dict = {"input":'''\
                         input: "{0.ident}"
                         input_shape: {{
                           dim: 1
-                          dim: 1
-                          dim: 1
                           dim: {0.nodes}
                         }}
                         ''',
-                "concat": '''\
+              "concat_0":'''\
                             layer {{
-                              name: "{0.ident}"
+                              name: "{0}"
                               type: "Concat"
-                              bottom: "{0.inputs[0]}"
-                              bottom: "{0.inputs[1]}"
-                              top: "{0.ident}"
+                              ''',
+              "concat_1": '''\
+                              top: "{0}"
                               concat_param {{
-                                axis: 3
+                                axis: 1
                               }}
                             }}
                             ''',
@@ -159,7 +157,11 @@ class genome(object):
             layer_b.append(self.layerchr_b[x])
         for x in range(lay_cross, len(self.layerchr_a)):
             layer_b.append(self.layerchr_a[x])
-        weight_cross = random.randint(1, m)
+        #TODO
+        if m > 0:
+            weight_cross = random.randint(1, m)
+        else:
+            weight_cross = 0
         weight_a = []
         weight_b = []
         for x in range(0, weight_cross):
@@ -232,7 +234,7 @@ class genome(object):
     #   given that I now know that list(t._layer/blob_names) exists?
     def build(self, delete=True):
         #first, generate a new ID for the network
-        self.ident = genome.generate_ident()
+        self.ident = genome.network_ident()
         if delete == False:
             if not os.path.exists('Gen files'):
                 os.makedirs('Gen files')
@@ -248,27 +250,35 @@ class genome(object):
             #then read the rest on the longer one
             if len(self.layerchr_a) > len(self.layerchr_b):
                 for n in range(len(self.layerchr_b)):
-                    active_list = self.layerchr_a[n].read(ident_file, active_list,
-                                                     concat_dict, self.layerchr_b[n])
+                    active_list = self.layerchr_a[n].read(ident_file,
+                                                          active_list,
+                                                          concat_dict,
+                                                          self.layerchr_b[n])
                 x = len(self.layerchr_b)
                 while x < len(self.layerchr_a):
-                    active_list = self.layerchr_a[x].read(ident_file, active_list,
-                                                     concat_dict, None)
+                    active_list = self.layerchr_a[x].read(ident_file,
+                                                          active_list,
+                                                          concat_dict,
+                                                          None)
                     x += 1
             else:
                 for n in range(len(self.layerchr_a)):
-                    active_list = self.layerchr_b[n].read(ident_file, active_list,
-                                                     concat_dict, self.layerchr_a[n])
+                    active_list = self.layerchr_b[n].read(ident_file,
+                                                          active_list,
+                                                          concat_dict,
+                                                          self.layerchr_a[n])
                 x = len(self.layerchr_a)
                 while x < len(self.layerchr_b):
-                    active_list = self.layerchr_b[x].read(ident_file, active_list,
-                                                     concat_dict, None)
+                    active_list = self.layerchr_b[x].read(ident_file,
+                                                          active_list,
+                                                          concat_dict, None)
                     x += 1
         else:
             #if they're the same length, hooray! just read them
             for n in range(len(self.layerchr_a)):
                 active_list = self.layerchr_a[n].read(ident_file, active_list,
-                                                      concat_dict, self.layerchr_b[n])
+                                                      concat_dict,
+                                                      self.layerchr_b[n])
         result = dedent(solv.format(ident_file))
         f = open("temp_solver.txt", "w")
         f.write(result)
@@ -279,7 +289,7 @@ class genome(object):
         if delete == True:
             os.remove(ident_file)
         #deal with concats and weights
-        self.concats(active_list, concat_dict)
+        self.concat_adjust(active_list, concat_dict)
         #now change the weights to those specified in genetics
         if len(self.weightchr_a) > 0:
             self.build_weights(active_list, solver.net)
@@ -289,7 +299,7 @@ class genome(object):
 
     #returns a string that becomes a network's unique ID
     @staticmethod
-    def generate_ident():
+    def network_ident():
         ident = ""
         while len(ident) != 11:
             if len(ident) == 3 or len(ident) == 7:
@@ -306,12 +316,29 @@ class genome(object):
     #(for the purposes of weights at least)
     #easiest option seems to be 'adjust the inputs'?
     #also needs to handle d->c,e->c,f->c, a->g...
-    def concats(self, active_list, concat_dict):
+    def concat_adjust(self, active_list, concat_dict):
+        #probably not the fastest way to do this
         for weight in self.weightchr_a:
-            if weight.in_layer in concat_dict:
-                if weight.out_layer in concat_dict[weight.in_layer][2::]:
-                    n = concat_dict[weight.in_layer][1]
-                    weight.alt_in += n
+            for key in concat_dict:
+                if (weight.in_layer in concat_dict[key][0] and
+                    weight.out_layer in concat_dict[key][2]):
+                        #don't adjust the first one
+                    if (concat_dict[key][0].index(weight.in_layer)) != 0:
+                        n = concat_dict[key][1][0]
+                        for lay in concat_dict[key][1][
+                            0:(concat_dict[key][0].index(weight.in_layer)-1)]:
+                            n += lay
+                        weight.alt_in += n
+        for weight in self.weightchr_b:
+            for key in concat_dict:
+                if (weight.in_layer in concat_dict[key][0] and
+                    weight.out_layer in concat_dict[key][2]):
+                    if (concat_dict[key][0].index(weight.in_layer)) != 0:
+                        n = concat_dict[key][1][0]
+                        for lay in concat_dict[key][1][
+                            0:(concat_dict[key][0].index(weight.in_layer)-1)]:
+                            n += lay
+                        weight.alt_in += n
 
     #reads the chromosomes that specify the network weights
     #and changes the weights in the created network to those weights
@@ -483,8 +510,8 @@ class genome(object):
                     list(net._bottom_ids(list(net._layer_names).index(key)))[0]]
                 #now see if this is in concat_dict?
                 conc = False
-                for zed in concat_dict:
-                    if concat_dict[zed][0] == in_layer:
+                for con in concat_dict:
+                    if in_layer in concat_dict[con][0]:
                         #then input is from a concat layer
                         conc = True
                         break
@@ -509,10 +536,10 @@ class genome(object):
         #check if left is a concat
         left_concat = False
         right_concat = False
-        for key in concat_dict:
-            if concat_dict[key][0] == ins_left:
+        for lay in concat_dict:
+            if ins_left in concat_dict[lay][0]:
                 left_concat = True
-            elif concat_dict[key][0] == ins_right:
+            if ins_right in concat_dict[lay][0]:
                 right_concat = True
             if left_concat == True and right_concat == True:
                 break
@@ -545,7 +572,7 @@ class genome(object):
             for j in range(len(d)):
                 weight = d[j][i+off]
                 w_gene = weight_gene(random.randint(1, 5), True, False,
-                                     def_mut_rate, genome.new_ident(), weight,
+                                     def_mut_rate, genome.gene_ident(), weight,
                                      i, j, in_layer, out_layer)
                 self.weightchr_a.append(w_gene)
                 w_gene.dom = random.randint(1, 5)
@@ -610,7 +637,7 @@ class genome(object):
     #generates a six-character alphabetical string to use as a gene identifier
     #TODO move?
     @staticmethod
-    def new_ident():
+    def gene_ident():
         letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         ident = ""
         while len(ident) < 6:
@@ -621,7 +648,7 @@ class genome(object):
     #it handles duplication mutations
     def handle_duplication(self, gene, chro):
         #first we make a new ident
-        new_id = genome.new_ident()
+        new_id = genome.gene_ident()
         #then copy the gene
         new_gene = layer_gene(gene.dom, gene.can_mut, gene.can_dup, gene.mut_rate,
                               new_id, gene.inputs, gene.nodes, gene.layer_type)
@@ -630,7 +657,9 @@ class genome(object):
         #find a later gene that will use the new one as input
         out_gene = self.new_input(new_gene, chro)
         #add concats
-        self.add_concats(new_gene, out_gene, chro)
+        x = self.add_concats(new_gene, out_gene, chro)
+        if x != None:
+            new_gene.inputs = [x]
         #then make the new weight genes
         self.dup_weights(new_gene, out_gene, chro)
 
@@ -657,7 +686,7 @@ class genome(object):
                 in_gene = g
                 break
         if in_gene.layer_type == "concat":
-            inputs, in_dict = self.find_n_genes(out_gene, chro)
+            inputs, in_dict = self.find_n_inputs(in_gene, chro)
         else:
             inputs = in_gene.nodes
             in_dict[in_gene.ident] = in_gene.nodes
@@ -672,7 +701,7 @@ class genome(object):
                 for j in range(new_gene.nodes):
                     w = weight_gene(random.randint(1,5),
                                     True, False, def_mut_rate,
-                                    genome.new_ident(),
+                                    genome.gene_ident(),
                                     weight, i, j, layer, new_gene.ident)
                     new_weights.append(w)
         #then from new gene -> the gene that now takes it as input
@@ -682,7 +711,7 @@ class genome(object):
                 weight = 1/inputs
                 w = weight_gene(random.randint(1,5),
                                 True, False, def_mut_rate,
-                                genome.new_ident(),
+                                genome.gene_ident(),
                                 weight, i, j, new_gene.ident, out_gene.ident)
                 new_weights.append(w)
         #and lastly stick it all in the weight chromosome
@@ -728,7 +757,7 @@ class genome(object):
                 if gene.layer_type != "concat":
                     #make new concat layer
                     conc = layer_gene(random.randint(1,5), False, False, 0,
-                                      genome.new_ident(),
+                                      genome.gene_ident(),
                                       [gene.ident, new_gene.ident],
                                       None, "concat")
                 else:
@@ -743,7 +772,7 @@ class genome(object):
                             #if so, make a new concat with old + new inputs
                             conc = layer_gene(random.randint(1,5),
                                               False, False, 0,
-                                              genome.new_ident(), inputs,
+                                              genome.gene_ident(), inputs,
                                               None, "concat")
                     if conc == []:
                     #and if not, move it w/ new gene added as input
@@ -752,11 +781,11 @@ class genome(object):
                                 conc = g
                         chro.remove(conc)
                         conc.inputs.append(new_gene.ident)
-                        conc.ident = genome.new_ident()
+                        conc.ident = genome.gene_ident()
             if conc != []:
                 chro.insert(chro.index(out_gene), conc)
                 out_gene.inputs = [conc.ident]
-                break
+                return conc.ident
                                
     #helper function for handle_mutation
     #when adding nodes to a layer, it deals with adding new weight genes
@@ -792,7 +821,7 @@ class genome(object):
                             w = random.gauss(0, var)
                             weight = weight_gene(random.randint(1, 5), True,
                                                  False, def_mut_rate,
-                                                 genome.new_ident(),
+                                                 genome.gene_ident(),
                                                  w, (i + g.in_node + 1),
                                                  j, gene.ident,
                                                  g.out_layer)
@@ -814,7 +843,7 @@ class genome(object):
                             w = random.gauss(0, var)
                             weight = weight_gene(random.randint(1, 5), True,
                                                  False, def_mut_rate,
-                                                 genome.new_ident(), w,
+                                                 genome.gene_ident(), w,
                                                  g.in_node, (i + g.out_node + 1),
                                                  g.in_layer, gene.ident)
                             weight_chr.insert(ind, weight)
@@ -883,26 +912,37 @@ class layer_gene(gene):
         self.layer_type = layer_type
 
     def read(self, read_file, active_list, concat_dict, other_gene=None):
-        ##first, check if self's inputs are all in active_list
-        if self.inputs == []:
-            self_read = True
+        self_read = True
+        if other_gene is not None:
+            other_read = True
         else:
-            for layer in self.inputs:
-                if layer not in active_list:
-                    self_read = False
-                else:
-                    self_read = True
-        if other_gene is None:
             other_read = False
-        else:
-            if other_gene.inputs == []:
-                other_read = True
+        #first, make sure self or other isn't already in active_list
+        #or we can get duplicates!
+        if self.ident in active_list:
+            self_read = False
+        if other_read != False:
+            if other_gene.ident in active_list:
+                other_read = False
+        if self_read == True or other_read == True:
+        #then, check if self's inputs are all in active_list
+            if self.inputs == []:
+                self_read = True
             else:
-                for layer in other_gene.inputs:
+                for layer in self.inputs:
                     if layer not in active_list:
-                        other_read = False
+                        self_read = False
                     else:
-                        other_read = True
+                        self_read = True
+            if other_gene is not None:
+                if other_gene.inputs == []:
+                    other_read = True
+                else:
+                    for layer in other_gene.inputs:
+                        if layer not in active_list:
+                            other_read = False
+                        else:
+                            other_read = True
         ##if neither can be read, return unchanged active_list
         ##if only one, read that
         if self_read == False:
@@ -912,58 +952,74 @@ class layer_gene(gene):
                 print_out = other_gene.read_out()
                 result = active_list.copy()
                 result[other_gene.ident] = other_gene.nodes
-                other_gene.concats(concat_dict, active_list)
         else:
             if other_read == False:
                 print_out = self.read_out()
                 result = active_list.copy()
                 result[self.ident] = self.nodes
-                self.concats(concat_dict, active_list)
         ##else, check dominance
         ##if tie, flip a coin (layers do not co-dominate)
             else:
                 result = active_list.copy()
                 if self.dom > other_gene.dom:
-                    print_out = self.read_out()
+                    print_out = self.read_out(concat_dict, active_list)
                     result[self.ident] = self.nodes
-                    self.concats(concat_dict, active_list)
                 elif other_gene.dom > self.dom:
-                    print_out = other_gene.read_out()
+                    print_out = other_gene.read_out(concat_dict, active_list)
                     result[other_gene.ident] = other_gene.nodes
-                    other_gene.concats(concat_dict, active_list)
                 else:
                     choice = random.randint(0, 1)
                     if choice == 0:
-                        print_out = self.read_out()
+                        print_out = self.read_out(concat_dict, active_list)
                         result[self.ident] = self.nodes
-                        self.concats(concat_dict, active_list)
                     else:
-                        print_out = other_gene.read_out()
+                        print_out = other_gene.read_out(concat_dict,
+                                                        active_list)
                         result[other_gene.ident] = other_gene.nodes
-                        other_gene.concats(concat_dict, active_list)
         ##output relevant text to file and return changed active_list
         f = open(read_file, "a")
         f.write(print_out)
         f.close()
         return result
 
+    #helper function for read
     #a function that produces the string a gene makes for the caffe file
-    def read_out(self):
-        result = dedent(layer_dict[self.layer_type].format(self))
-        return result
-
-    #helper function for read to help create concat layers
-    #dict entries format:
-    #'input 2.ident': ['concat_ident', input1.nodes,
-    #               'output_ident', 'output_ident'...]
-    def concats(self, concat_dict, active_list):
-        if self.layer_type == "concat":
-            len_a = active_list[self.inputs[0]]
-            concat_dict[self.inputs[1]] = [self.ident, len_a]
-        elif self.layer_type == "IP":
+    #this includes any concat layers needed
+    #concat_dict entries format:
+    #concat: [[in_layer1.ident, in_layer2.ident...][in_layer1.nodes,
+    #       in_layer2.nodes...][out_layer1.ident, out_layer2.ident...]]
+    def read_out(self, concat_dict, active_list):
+        #if more than one input, need concat layers
+        if len(self.inputs) > 1:
+            in_con = None
             for key in concat_dict:
-                if concat_dict[key][0] == self.inputs[0]:
-                    concat_dict[key].append(self.ident)
+                #checking to see if any of the current concat layers
+                #contain all of the inputs for this layer
+                #(so we don't have to create a new one)
+                #TODO: do we need to sort these?
+                if self.inputs == concat_dict[key][0]:
+                #if so, then add this layer as an output
+                    concat_dict[key][2].append(self.ident)
+                    in_con == key
+                #else, need to make a new concat layer, and hence new entry
+            if in_con == None:
+                k = genome.gene_ident()
+                in_con = k
+                in_nodes = []
+                for lay in self.inputs:
+                    in_nodes.append(active_list[lay])
+                concat_dict[k] = [self.inputs, in_nodes, [self.ident]]
+            #print the concat layer first
+            result = dedent(layer_dict["concat_0"].format(k)) + "\n"
+            for lay in self.inputs:
+                result += "  bottom: \"" + lay + "\"\n"
+            result += dedent(layer_dict["concat_1"].format(k))
+            #now this layer
+            self.inputs = [in_con]
+            result += dedent(layer_dict[self.layer_type].format(self))
+        else:
+            result = dedent(layer_dict[self.layer_type].format(self))
+        return result
 
     def mutate(self):
         if not self.can_mut:
