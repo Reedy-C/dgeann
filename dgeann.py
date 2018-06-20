@@ -131,6 +131,10 @@ class genome(object):
         layer_two = layer_two[0]
         weight_one = weight_one[0]
         weight_two = weight_two[0]
+        for gen in weight_one:
+            gen.alt_in = gen.in_node
+        for gen in weight_two:
+            gen.alt_in = gen.in_node
         child = genome(layer_one, layer_two, weight_one, weight_two)
         #now just do mutations
         child.mutate()
@@ -320,11 +324,10 @@ class genome(object):
                     weight.out_layer in concat_dict[key][2]):
                         #don't adjust the first one
                     if (concat_dict[key][0].index(weight.in_layer)) != 0:
-                        n = concat_dict[key][1][0]
-                        for lay in concat_dict[key][1][
+                        n = concat_dict[key][1][0]                        for lay in concat_dict[key][1][
                             0:(concat_dict[key][0].index(weight.in_layer)-1)]:
                             n += lay
-                        weight.alt_in += n
+                        weight.alt_in = n + weight.in_node
         for weight in self.weightchr_b:
             for key in concat_dict:
                 if (weight.in_layer in concat_dict[key][0] and
@@ -334,7 +337,7 @@ class genome(object):
                         for lay in concat_dict[key][1][
                             0:(concat_dict[key][0].index(weight.in_layer)-1)]:
                             n += lay
-                        weight.alt_in += n
+                        weight.alt_in = n + weight.in_node
 
     #reads the chromosomes that specify the network weights
     #and changes the weights in the created network to those weights
@@ -464,6 +467,7 @@ class genome(object):
         out_node = values[3]
         in_node = values[1]
         weight = values[4]
+        print(values)
         net.params[output][0].data[out_node][in_node] = weight
         if len(values) > 5:
             output = values[7]
@@ -657,8 +661,6 @@ class genome(object):
         chro.insert(chro.index(gene), new_gene)
         #find a later gene that will use the new one as input
         out_gene = self.new_input(new_gene, chro)
-        #add concats
-        #x = self.add_concats(new_gene, out_gene, chro)
         #if x != None:
         #    new_gene.inputs = [x]
         #then make the new weight genes
@@ -760,6 +762,7 @@ class genome(object):
         done_ins = {}
         done_outs = []
         outs = self.find_outputs(gene, chro)
+        print(gene.ident, gene.inputs, outs)
         out_dict = {}
         for layer in outs:
             out_dict[layer.ident] = layer
