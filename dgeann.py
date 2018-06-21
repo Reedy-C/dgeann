@@ -4,6 +4,7 @@ import os
 import math
 import caffe
 import numpy
+import copy
 
 #default solver
 solv = '''\
@@ -127,10 +128,10 @@ class genome(object):
         layer_two = random.sample([parent_one.layerchr_b, parent_two.layerchr_b], 1)
         weight_one = random.sample([parent_one.weightchr_a, parent_two.weightchr_a], 1)
         weight_two = random.sample([parent_one.weightchr_b, parent_two.weightchr_b], 1)
-        layer_one = layer_one[0]
-        layer_two = layer_two[0]
-        weight_one = weight_one[0]
-        weight_two = weight_two[0]
+        layer_one = copy.deepcopy(layer_one[0])
+        layer_two = copy.deepcopy(layer_two[0])
+        weight_one = copy.deepcopy(weight_one[0])
+        weight_two = copy.deepcopy(weight_two[0])
         for gen in weight_one:
             gen.alt_in = gen.in_node
         for gen in weight_two:
@@ -322,10 +323,11 @@ class genome(object):
             for key in concat_dict:
                 if (weight.in_layer in concat_dict[key][0] and
                     weight.out_layer in concat_dict[key][2]):
-                        #don't adjust the first one
+                    #don't adjust the first one
                     if (concat_dict[key][0].index(weight.in_layer)) != 0:
-                        n = concat_dict[key][1][0]                        for lay in concat_dict[key][1][
-                            0:(concat_dict[key][0].index(weight.in_layer)-1)]:
+                        n = concat_dict[key][1][0]
+                        for lay in concat_dict[key][1][
+                            1:(concat_dict[key][0].index(weight.in_layer))]:
                             n += lay
                         weight.alt_in = n + weight.in_node
         for weight in self.weightchr_b:
@@ -335,7 +337,7 @@ class genome(object):
                     if (concat_dict[key][0].index(weight.in_layer)) != 0:
                         n = concat_dict[key][1][0]
                         for lay in concat_dict[key][1][
-                            0:(concat_dict[key][0].index(weight.in_layer)-1)]:
+                            1:(concat_dict[key][0].index(weight.in_layer))]:
                             n += lay
                         weight.alt_in = n + weight.in_node
 
@@ -467,7 +469,6 @@ class genome(object):
         out_node = values[3]
         in_node = values[1]
         weight = values[4]
-        print(values)
         net.params[output][0].data[out_node][in_node] = weight
         if len(values) > 5:
             output = values[7]
@@ -655,14 +656,13 @@ class genome(object):
         #first we make a new ident
         new_id = genome.gene_ident()
         #then copy the gene
-        new_gene = layer_gene(gene.dom, gene.can_mut, gene.can_dup, gene.mut_rate,
-                              new_id, gene.inputs, gene.nodes, gene.layer_type)
+        new_gene = copy.deepcopy(gene)
+        new_gene.ident = new_id
         #find index of gene, then stick new one in before that
         chro.insert(chro.index(gene), new_gene)
         #find a later gene that will use the new one as input
         out_gene = self.new_input(new_gene, chro)
-        #if x != None:
-        #    new_gene.inputs = [x]
+        out_gene.inputs.append(new_gene.ident)
         #then make the new weight genes
         self.dup_weights(new_gene, out_gene, chro)
 
@@ -691,29 +691,26 @@ class genome(object):
                 in_dict[g.ident] = g.nodes
             if g.ident in out_gene.inputs:
                 out_inputs += g.nodes
-        #if in_gene.layer_type == "concat":
-        #    inputs, in_dict = self.find_n_inputs(in_gene, chro)
-        #else:
-        #inputs = in_gene.nodes
-        #in_dict[in_gene.ident] = in_gene.nodes
+        #xavier weight initialization: mean = 0 variance=1/n inputs
+        #gaussian distribution
+        var = 1/inputs
+        #we give this function the std, not var
+        var = math.sqrt(var)
         for layer in in_dict:
-            #xavier weight initialization: mean = 0 variance=1/n inputs
-            #gaussian distribution
-            var = 1/inputs
-            #we give this function the std, not var
-            var = math.sqrt(var)
-            weight = random.gauss(0, var)
             for i in range(in_dict[layer]):
                 for j in range(new_gene.nodes):
+                    weight = random.gauss(0, var)
                     w = weight_gene(random.randint(1,5),
                                     True, False, def_mut_rate,
                                     genome.gene_ident(),
                                     weight, i, j, layer, new_gene.ident)
                     new_weights.append(w)
         #then from new gene -> the gene that now takes it as input
+        var = 1/out_inputs
+        var = math.sqrt(var)
         for i in range(new_gene.nodes):
             for j in range(out_gene.nodes):
-                weight = 1/out_inputs
+                weight = random.gauss(0, var)
                 w = weight_gene(random.randint(1,5),
                                 True, False, def_mut_rate,
                                 genome.gene_ident(),
@@ -762,7 +759,6 @@ class genome(object):
         done_ins = {}
         done_outs = []
         outs = self.find_outputs(gene, chro)
-        print(gene.ident, gene.inputs, outs)
         out_dict = {}
         for layer in outs:
             out_dict[layer.ident] = layer
@@ -774,6 +770,7 @@ class genome(object):
                 new = (gene.nodes + new_nodes - 1) - g.in_node
                 if new > 0:
                     ind = weight_chr.index(g) + 1
+                    #TODO replace
                     out_n, out_d = self.find_n_inputs(out_dict[g.out_layer],
                                                       chro)
                     var = out_n/1
@@ -892,20 +889,22 @@ class layer_gene(gene):
             if self.inputs == []:
                 self_read = True
             else:
-                for layer in self.inputs:
-                    if layer not in active_list:
-                        self_read = False
-                    else:
-                        self_read = True
+                if self_read == True:
+                    for layer in self.inputs:
+                        if layer not in active_list:
+                            self_read = False
+                        else:
+                            self_read = True
             if other_gene is not None:
                 if other_gene.inputs == []:
                     other_read = True
                 else:
-                    for layer in other_gene.inputs:
-                        if layer not in active_list:
-                            other_read = False
-                        else:
-                            other_read = True
+                    if other_read == True:
+                        for layer in other_gene.inputs:
+                            if layer not in active_list:
+                                other_read = False
+                            else:
+                                other_read = True
         ##if neither can be read, return unchanged active_list
         ##if only one, read that
         if self_read == False:
