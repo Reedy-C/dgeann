@@ -245,41 +245,42 @@ class genome(object):
         ident_file = os.path.join('Gen files', self.ident)
         active_list = {}
         concat_dict = {}
-        if len(self.layerchr_a) != len(self.layerchr_b):
-            #if the chromosomes are not equal in length, read both
-            #for the length of the shorter one
-            #then read the rest on the longer one
-            if len(self.layerchr_a) > len(self.layerchr_b):
-                for n in range(len(self.layerchr_b)):
-                    active_list = self.layerchr_a[n].read(ident_file,
-                                                          active_list,
-                                                          concat_dict,
-                                                          self.layerchr_b[n])
-                x = len(self.layerchr_b)
-                while x < len(self.layerchr_a):
-                    active_list = self.layerchr_a[x].read(ident_file,
-                                                          active_list,
-                                                          concat_dict,
-                                                          None)
-                    x += 1
-            else:
-                for n in range(len(self.layerchr_a)):
-                    active_list = self.layerchr_b[n].read(ident_file,
-                                                          active_list,
-                                                          concat_dict,
-                                                          self.layerchr_a[n])
-                x = len(self.layerchr_a)
-                while x < len(self.layerchr_b):
-                    active_list = self.layerchr_b[x].read(ident_file,
-                                                          active_list,
-                                                          concat_dict, None)
-                    x += 1
-        else:
-            #if they're the same length, hooray! just read them
-            for n in range(len(self.layerchr_a)):
-                active_list = self.layerchr_a[n].read(ident_file, active_list,
-                                                      concat_dict,
-                                                      self.layerchr_b[n])
+        active_list = self.build_layers(active_list, ident_file)
+##        if len(self.layerchr_a) != len(self.layerchr_b):
+##            #if the chromosomes are not equal in length, read both
+##            #for the length of the shorter one
+##            #then read the rest on the longer one
+##            if len(self.layerchr_a) > len(self.layerchr_b):
+##                for n in range(len(self.layerchr_b)):
+##                    active_list = self.layerchr_a[n].read(ident_file,
+##                                                          active_list,
+##                                                          concat_dict,
+##                                                          self.layerchr_b[n])
+##                x = len(self.layerchr_b)
+##                while x < len(self.layerchr_a):
+##                    active_list = self.layerchr_a[x].read(ident_file,
+##                                                          active_list,
+##                                                          concat_dict,
+##                                                          None)
+##                    x += 1
+##            else:
+##                for n in range(len(self.layerchr_a)):
+##                    active_list = self.layerchr_b[n].read(ident_file,
+##                                                          active_list,
+##                                                          concat_dict,
+##                                                          self.layerchr_a[n])
+##                x = len(self.layerchr_a)
+##                while x < len(self.layerchr_b):
+##                    active_list = self.layerchr_b[x].read(ident_file,
+##                                                          active_list,
+##                                                          concat_dict, None)
+##                    x += 1
+##        else:
+##            #if they're the same length, hooray! just read them
+##            for n in range(len(self.layerchr_a)):
+##                active_list = self.layerchr_a[n].read(ident_file, active_list,
+##                                                      concat_dict,
+##                                                      self.layerchr_b[n])
         result = dedent(solv.format(ident_file))
         f = open("temp_solver.txt", "w")
         f.write(result)
@@ -310,6 +311,65 @@ class genome(object):
         ident = "T" + ident
         return ident
 
+    #helper function for build
+    #creates the layer stucture of the network
+    #in a file that caffe can read
+    #which build then uses to create the caffe network object
+    def build_layers(self, active_list, ident_file):
+        #nb note to self: do not forget to deepcopy things
+        self.layers_equalize()
+        active_list, layout = self.structure_network(active_list)
+        self.layout_weights
+        #read out combined genome
+        return active_list
+
+    #helper function for build_layers
+    #makes the two layer chromosomes an equal length
+    #by inserting 'null' layers into the shorter one if necessary
+    def layers_equalize(self):
+        if len(self.layerchr_a) != len(self.layerchr_b):
+            #print(len(self.layerchr_a), len(self.layerchr_b))
+            n = 0
+            m = 0
+            #run through backwards
+            self.layerchr_a.reverse()
+            self.layerchr_b.reverse()
+            while len(self.layerchr_a) != len(self.layerchr_b):
+                #see if a == b
+                if self.layerchr_a[n].ident != self.layerchr_b[m].ident:
+                #if not, then insert a new null layer
+                #under the shorter one
+                    null = layer_gene(3, False, False, 0, "null", [],
+                                      None, None)
+                #compare same layer in shorter with next in longer
+                    if len(self.layerchr_a) < len(self.layerchr_b):
+                        self.layerchr_a.insert(self.layerchr_a.index(
+                                                self.layerchr_a[n]),
+                                               null)
+                        m += 1
+                        n += 1
+                    else:
+                        self.layerchr_b.insert(self.layerchr_b.index(
+                                                self.layerchr_b[m]),
+                                               null)
+                        n += 1
+                        m += 1
+                else:
+                    n += 1
+                    m += 1
+            self.layerchr_a.reverse()
+            self.layerchr_b.reverse()
+
+    #helper function for build_layers
+    #returns a list of genes that are ready to be turned into a network file
+    #and active_list
+    def structure_network(self, active_list):
+        #choose one layer chr to use as layout structure pattern
+        layout = copy.deepcopy(random.choice([self.layerchr_a,
+                                              self.layerchr_b]))
+        
+        return(active_list, layout)
+            
     #this is here to deal with what happens when we have concat layers
     #if a and b are concatted and fed to c, a is okay
     #but any b->c weight genes won't work right
@@ -478,10 +538,11 @@ class genome(object):
             net.params[output][0].data[out_node][in_node] = weight
             
     #helper function for build_weights
-    #takes chromosome, n (position of gene in chromosome)
+    #takes weight chromosome, n (position of gene in chromosome)
     #active_list
     #net
     #advances down one chromosome at a time
+    #adjusts weights
     def read_through(self, chro, n, active_list, net):
         if chro == "a":
             chro = self.weightchr_a
@@ -723,11 +784,10 @@ class genome(object):
             self.weightchr_a.append(gene)
             self.weightchr_b.append(gene)
 
-    #helper function for dup_weights
+    #helper function for add_nodes
     #returns total inputs to gene (adds together concat inputs)
     #also returns a dict (dict[layer_name] = layer_nodes)
     #TODO: can I simplify this with the functions I just learned about?
-    #TODO no longer used
     def find_n_inputs(self, gene, chro):
         inputs = 0
         in_dict = {}
@@ -770,7 +830,6 @@ class genome(object):
                 new = (gene.nodes + new_nodes - 1) - g.in_node
                 if new > 0:
                     ind = weight_chr.index(g) + 1
-                    #TODO replace
                     out_n, out_d = self.find_n_inputs(out_dict[g.out_layer],
                                                       chro)
                     var = out_n/1
