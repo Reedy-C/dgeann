@@ -349,6 +349,8 @@ class testBuild(unittest.TestCase):
         self.assertEqual(ident, "T125-659-499")
 
     def test_build_layers(self):
+        self.l_unread_a.inputs = []
+        self.l_unread_a.layer_type = 'data'
         #layers_equalize
         null = dgeann.layer_gene(3, False, False, 0, "null", [],
                                  None, None)
@@ -388,7 +390,6 @@ class testBuild(unittest.TestCase):
         for i in range(len(g2.layerchr_b)):
             self.assertEqual(g2.layerchr_b[i].ident,
                              g2_test.layerchr_b[i].ident)
-        print("end g2")
         #case where chr b has an extra gene
         g3 = dgeann.genome([self.l_unread_a, self.l_low_dom_a,
                             self.l_dummy_layer],
@@ -425,7 +426,7 @@ class testBuild(unittest.TestCase):
         for i in range(len(g4.layerchr_b)):
             self.assertEqual(g4.layerchr_b[i].ident,
                              g4_test.layerchr_b[i].ident)
-        #case where chr b has two extra genes
+        #case where chr b has three extra genes
         g5 = dgeann.genome([self.l_unread_a, self.l_low_dom_a,
                             self.l_dummy_layer],
                            [self.l_unread_a, self.l_low_dom_c,
@@ -445,6 +446,37 @@ class testBuild(unittest.TestCase):
         for i in range(len(g5.layerchr_b)):
             self.assertEqual(g5.layerchr_b[i].ident,
                              g5_test.layerchr_b[i].ident)
+        #case where chromosomes are equal, but with IP layers
+        IPG = dgeann.layer_gene(5, False, False, 0, "G",
+                                ["askl"], 2, "IP")
+        IPH = dgeann.layer_gene(5, False, False, 0, "H",
+                                ["askl"], 2, "IP")
+        IPI = dgeann.layer_gene(5, False, False, 0, "I",
+                                ["G"], 2, "IP")
+        IPJ = dgeann.layer_gene(5, False, False, 0, "J",
+                                ["H"], 2, "IP")
+        IPK = dgeann.layer_gene(5, False, False, 0, "I",
+                                ["G", "H"], 2, "IP")
+        gp6 = dgeann.genome([self.l_unread_a, IPG, IPI],
+                            [self.l_unread_a, IPH, IPJ], [], [])
+        gp6.layers_equalize()
+        self.assertEqual(len(gp6.layerchr_a), 3)
+        self.assertEqual(len(gp6.layerchr_b), 3)
+        #case where chromosomes are unequal, with an IP layer with high dom
+        gp7 = dgeann.genome([self.l_unread_a, IPG, IPH, IPK],
+                            [self.l_unread_a, IPG, IPI], [], [])
+        gp7.layers_equalize()
+        gp7_test_b = [self.l_unread_a, IPG, null, IPI]
+        self.assertEqual(len(gp7.layerchr_a), 4)
+        self.assertEqual(len(gp7.layerchr_b), 4)
+        for i in range(4):
+            self.assertEqual(gp7.layerchr_b[i].ident, gp7_test_b[i].ident)
+        #structure_network
+        g1_list, g1_layout = g1.structure_network({})
+        g2_list, g2_layout = g2.structure_network({})
+        g3_list, g3_layout = g3.structure_network({})
+        g4_list, g4_layout = g4.structure_network({})
+        g5_list, g5_layout = g5.structure_network({})
             
 ##    def test_adjust_weights(self):
 ##        testa = dgeann.weight_gene(1, False, False, 0.0, "a", -0.06807647, 0, 0,

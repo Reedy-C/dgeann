@@ -319,7 +319,8 @@ class genome(object):
         #nb note to self: do not forget to deepcopy things
         self.layers_equalize()
         active_list, layout = self.structure_network(active_list)
-        self.layout_weights
+        if len(self.weightchr_a) != 0:
+            self.layout_weights
         #read out combined genome
         return active_list
 
@@ -362,14 +363,14 @@ class genome(object):
 
     #helper function for build_layers
     #returns a list of genes that are ready to be turned into a network file
-    #and active_list
+    #and active_list ({layer: # nodes})
     def structure_network(self, active_list):
         #choose one layer chr to use as layout structure pattern
         layout = copy.deepcopy(random.choice([self.layerchr_a,
                                               self.layerchr_b]))
         
         return(active_list, layout)
-            
+
     #this is here to deal with what happens when we have concat layers
     #if a and b are concatted and fed to c, a is okay
     #but any b->c weight genes won't work right
