@@ -366,9 +366,30 @@ class genome(object):
     #and active_list ({layer: # nodes})
     def structure_network(self, active_list):
         #choose one layer chr to use as layout structure pattern
-        layout = copy.deepcopy(random.choice([self.layerchr_a,
-                                              self.layerchr_b]))
-        
+        layout = copy.copy(random.choice([self.layerchr_a,
+                                          self.layerchr_b]))
+        orphan_list = []
+        sub_dict = {}
+        for i in range(len(self.layerchr_a)):
+            #for pair in chrs: read
+            read_gene = self.layerchr_a[i].read(self.layerchr_b[i].read)
+            if read_gene is not None:
+            #if gene already there in layout: keep
+                if read_gene == layout[i]:
+                    if read_gene.ident != 'null':
+                        active_list[read_gene.ident: read_gene.nodes]
+                        orphan_list.append(read_gene.ident)
+                        for j in inputs:
+                            if j in orphan_list:
+                                orphan_list.remove(j)
+                #else if other gene, if not null
+                else:
+                    if read_gene.ident != 'null':
+            #keep inputs the same, but sub name in outputs
+            #if node # different, change to B
+            #adjust weights to use A's weights with B's name?
+            #else if null OR None, delete names in output
+        #now delete all null layers in chr a, chr b, and layout
         return(active_list, layout)
 
     #this is here to deal with what happens when we have concat layers

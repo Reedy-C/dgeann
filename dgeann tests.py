@@ -414,10 +414,11 @@ class testBuild(unittest.TestCase):
                             [self.l_unread_a, self.l_low_dom_b, self.l_high_dom,
                             self.l_dummy_layer], [], [])
         g4.layers_equalize()
-        g4_test = dgeann.genome([self.l_unread_a, self.l_low_dom_a, self.l_low_dom_b,
-                            self.l_low_dom_c, self.l_dummy_layer],
-                            [self.l_unread_a, self.l_low_dom_b, self.l_high_dom,
-                             null, self.l_dummy_layer], [], [])
+        g4_test = dgeann.genome([self.l_unread_a, self.l_low_dom_a,
+                                 self.l_low_dom_b, self.l_low_dom_c,
+                                 self.l_dummy_layer],
+                            [self.l_unread_a, self.l_low_dom_b,
+                             self.l_high_dom, null, self.l_dummy_layer], [], [])
         self.assertEqual(len(g4.layerchr_a), len(g4_test.layerchr_a))
         self.assertEqual(len(g4.layerchr_b), len(g4_test.layerchr_b))
         for i in range(len(g4.layerchr_a)):
@@ -457,26 +458,70 @@ class testBuild(unittest.TestCase):
                                 ["H"], 2, "IP")
         IPK = dgeann.layer_gene(5, False, False, 0, "I",
                                 ["G", "H"], 2, "IP")
-        gp6 = dgeann.genome([self.l_unread_a, IPG, IPI],
+        g6 = dgeann.genome([self.l_unread_a, IPG, IPI],
                             [self.l_unread_a, IPH, IPJ], [], [])
-        gp6.layers_equalize()
-        self.assertEqual(len(gp6.layerchr_a), 3)
-        self.assertEqual(len(gp6.layerchr_b), 3)
+        g6.layers_equalize()
+        self.assertEqual(len(g6.layerchr_a), 3)
+        self.assertEqual(len(g6.layerchr_b), 3)
         #case where chromosomes are unequal, with an IP layer with high dom
-        gp7 = dgeann.genome([self.l_unread_a, IPG, IPH, IPK],
+        g7 = dgeann.genome([self.l_unread_a, IPG, IPH, IPK],
                             [self.l_unread_a, IPG, IPI], [], [])
-        gp7.layers_equalize()
-        gp7_test_b = [self.l_unread_a, IPG, null, IPI]
-        self.assertEqual(len(gp7.layerchr_a), 4)
-        self.assertEqual(len(gp7.layerchr_b), 4)
+        g7.layers_equalize()
+        g7_test_b = [self.l_unread_a, IPG, null, IPI]
+        self.assertEqual(len(g7.layerchr_a), 4)
+        self.assertEqual(len(g7.layerchr_b), 4)
         for i in range(4):
-            self.assertEqual(gp7.layerchr_b[i].ident, gp7_test_b[i].ident)
+            self.assertEqual(g7.layerchr_b[i].ident, g7_test_b[i].ident)
         #structure_network
+        dgeann.random.seed("evo-devo")
         g1_list, g1_layout = g1.structure_network({})
         g2_list, g2_layout = g2.structure_network({})
         g3_list, g3_layout = g3.structure_network({})
         g4_list, g4_layout = g4.structure_network({})
         g5_list, g5_layout = g5.structure_network({})
+        g6_list, g6_layout = g6.structure_network({})
+        g7_list, g7_layout = g7.structure_network({})
+        g1_testlist = {"askl": 3, "ijkl": 2, "blegh": 5}
+        g2_testlist = {"askl": 3, "ijkl": 2, "blegh": 5}
+        #might be other gene
+        g3_testlist = {"askl": 3, "data": 8, "blegh": 5}
+        #might be other gene
+        g4_testlist = {"askl": 3, "data": 8, "blegh": 5}
+        g5_testlist = {"askl": 3, "data": 8, "ijkl": 2, "blegh": 5}
+        #might be other gene
+        g6_testlist = {"askl": 3, "G": 2, "I": 2}
+        #might be other I?
+        g7_testlist = {"askl": 3, "G": 2, "H": 2, "I": 2}
+        g1_testlayout = [self.l_unread_a, self.l_high_dom,
+                            self.l_dummy_layer]
+        g2_testlayout = [self.l_unread_a, self.l_high_dom,
+                            self.l_dummy_layer]
+        #might be other gene
+        g3_testlayout = [self.l_unread_a, self.l_low_dom_a, self.l_high_dom,
+                         self.l_dummy_layer]
+        #might be other gene
+        g4_testlayout = [self.l_unread_a, self.l_low_dom_a, self.l_high_dom,
+                         self.l_dummy_layer]
+        g5_testlayout = [self.l_unread_a, self.l_low_dom_a, self.l_high_dom,
+                         self.l_dummy_layer]
+        #might be other gene
+        g6_testlayout = [self.l_unread_a, IPG, IPI]
+        #might be other I
+        g7_testlayout = [self.l_unread_a, IPG, IPH, IPI]
+        listlists = [g1_list, g2_list, g3_list, g4_list, g5_list, g6_list,
+                     g7_list]
+        testlists = [g1_testlist, g2_testlist, g3_testlist, g4_testlist,
+                     g5_testlist, g6_testlist, g7_testlist]
+        listlayouts = [g1_layout, g2_layout, g3_layout, g4_layout,
+                     g5_layout, g6_layout, g7_layout]
+        testlayouts = [g1_testlayout, g2_testlayout, g3_testlayout, g4_testlayout,
+                     g5_testlayout, g6_testlayout, g7_testlayout]
+        for i in range(len(listlists)):
+            self.assertEqual(listlists[i], testlists[i])
+            j = 0
+            for gene in listlayouts[i]:
+                self.assertEqual(gene.ident, testlayouts[i][j].ident)
+                j += 1
             
 ##    def test_adjust_weights(self):
 ##        testa = dgeann.weight_gene(1, False, False, 0.0, "a", -0.06807647, 0, 0,
