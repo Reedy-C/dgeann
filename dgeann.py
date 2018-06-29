@@ -243,44 +243,10 @@ class genome(object):
         if not os.path.exists('Gen files'):
             os.makedirs('Gen files')
         ident_file = os.path.join('Gen files', self.ident)
+        #then build network structure
         active_list = {}
         concat_dict = {}
         active_list = self.build_layers(active_list, ident_file)
-##        if len(self.layerchr_a) != len(self.layerchr_b):
-##            #if the chromosomes are not equal in length, read both
-##            #for the length of the shorter one
-##            #then read the rest on the longer one
-##            if len(self.layerchr_a) > len(self.layerchr_b):
-##                for n in range(len(self.layerchr_b)):
-##                    active_list = self.layerchr_a[n].read(ident_file,
-##                                                          active_list,
-##                                                          concat_dict,
-##                                                          self.layerchr_b[n])
-##                x = len(self.layerchr_b)
-##                while x < len(self.layerchr_a):
-##                    active_list = self.layerchr_a[x].read(ident_file,
-##                                                          active_list,
-##                                                          concat_dict,
-##                                                          None)
-##                    x += 1
-##            else:
-##                for n in range(len(self.layerchr_a)):
-##                    active_list = self.layerchr_b[n].read(ident_file,
-##                                                          active_list,
-##                                                          concat_dict,
-##                                                          self.layerchr_a[n])
-##                x = len(self.layerchr_a)
-##                while x < len(self.layerchr_b):
-##                    active_list = self.layerchr_b[x].read(ident_file,
-##                                                          active_list,
-##                                                          concat_dict, None)
-##                    x += 1
-##        else:
-##            #if they're the same length, hooray! just read them
-##            for n in range(len(self.layerchr_a)):
-##                active_list = self.layerchr_a[n].read(ident_file, active_list,
-##                                                      concat_dict,
-##                                                      self.layerchr_b[n])
         result = dedent(solv.format(ident_file))
         f = open("temp_solver.txt", "w")
         f.write(result)
@@ -318,10 +284,11 @@ class genome(object):
     def build_layers(self, active_list, ident_file):
         #nb note to self: do not forget to deepcopy things
         self.layers_equalize()
-        active_list, layout = self.structure_network(active_list)
+        sub_dict, active_list, layout = self.structure_network(active_list)
         if len(self.weightchr_a) != 0:
-            self.layout_weights
+            self.layout_weights(active_list, sub_dict)
         #read out combined genome
+        #TODO
         return active_list
 
     #helper function for build_layers
@@ -368,29 +335,52 @@ class genome(object):
         #choose one layer chr to use as layout structure pattern
         layout = copy.copy(random.choice([self.layerchr_a,
                                           self.layerchr_b]))
-        orphan_list = []
+        #orphan_list = []
         sub_dict = {}
+        del_list = []
         for i in range(len(self.layerchr_a)):
             #for pair in chrs: read
-            read_gene = self.layerchr_a[i].read(self.layerchr_b[i].read)
+            read_gene = self.layerchr_a[i].read(active_list,
+                                                self.layerchr_b[i], sub_dict,
+                                                del_list)
             if read_gene is not None:
             #if gene already there in layout: keep
                 if read_gene == layout[i]:
                     if read_gene.ident != 'null':
-                        active_list[read_gene.ident: read_gene.nodes]
-                        orphan_list.append(read_gene.ident)
-                        for j in inputs:
-                            if j in orphan_list:
-                                orphan_list.remove(j)
+                        active_list[read_gene.ident] = read_gene.nodes
+                        #orphan_list.append(read_gene.ident)
+                        #for j in inputs:
+                        #    if j in orphan_list:
+                        #        orphan_list.remove(j)
                 #else if other gene, if not null
                 else:
                     if read_gene.ident != 'null':
-            #keep inputs the same, but sub name in outputs
-            #if node # different, change to B
+                    #keep inputs the same, but sub name in outputs
+                        new_layer = copy.copy(read_gene)
+                        if layout[i].ident != 'null':
+                            new_layer.inputs = layout[i].inputs
+                        sub_dict = {layout[i].ident: new_layer.ident}
+                        layout[i] = new_layer
+                        #orphan_list.append(layout[i].ident)
+                        active_list[layout[i].ident] = layout[i].nodes
+                    else:
+                        del_list.append(layout[i].ident)
+                        layout[i] = read_gene
             #adjust weights to use A's weights with B's name?
-            #else if null OR None, delete names in output
+            #if null OR None (?), delete names in output
+            #TODO skipping with None for now
+            else:
+                if layout[i].ident != 'null':
+                    layout[i] = layer_gene(3, False, False, 0, "null", [],
+                                            None, None)
+##            #clear out orphans
+##            #...if I figure how to do so without clearing out
+##            #top-level layers
         #now delete all null layers in chr a, chr b, and layout
-        return(active_list, layout)
+        layout[:] = [x for x in layout if x.ident != "null"]
+        self.layerchr_a[:] = [x for x in self.layerchr_a if x.ident != "null"]
+        self.layerchr_b[:] = [x for x in self.layerchr_b if x.ident != "null"]
+        return sub_dict, active_list, layout
 
     #this is here to deal with what happens when we have concat layers
     #if a and b are concatted and fed to c, a is okay
@@ -952,80 +942,66 @@ class layer_gene(gene):
         self.nodes = nodes
         self.layer_type = layer_type
 
-    def read(self, read_file, active_list, concat_dict, other_gene=None):
+    def read(self, active_list, other_gene, sub_dict, del_list):
         self_read = True
-        if other_gene is not None:
-            other_read = True
-        else:
-            other_read = False
+        other_read = True
         #first, make sure self or other isn't already in active_list
         #or we can get duplicates!
         if self.ident in active_list:
             self_read = False
-        if other_read != False:
-            if other_gene.ident in active_list:
-                other_read = False
+        if other_gene.ident in active_list:
+            other_read = False
         if self_read == True or other_read == True:
         #then, check if self's inputs are all in active_list
             if self.inputs == []:
                 self_read = True
             else:
                 if self_read == True:
-                    for layer in self.inputs:
-                        if layer not in active_list:
-                            self_read = False
+                    ins = copy.copy(self.inputs)
+                    for lay in ins:
+                        if lay in del_list:
+                           ins.remove(lay)
                         else:
-                            self_read = True
-            if other_gene is not None:
-                if other_gene.inputs == []:
-                    other_read = True
-                else:
-                    if other_read == True:
-                        for layer in other_gene.inputs:
-                            if layer not in active_list:
+                            if lay in sub_dict.keys():
+                                lay = sub_dict[lay]
+                            if lay not in active_list:
+                                self_read = False
+                            else:
+                                self_read = True
+            if other_gene.inputs == []:
+                other_read = True
+            else:
+                if other_read == True:
+                    ins = copy.copy(other_gene.inputs)
+                    for lay in ins:
+                        if lay in del_list:
+                           ins.remove(lay)
+                        else:
+                            if lay in sub_dict.keys():
+                                lay = sub_dict[lay]
+                            if lay not in active_list:
                                 other_read = False
                             else:
                                 other_read = True
-        ##if neither can be read, return unchanged active_list
-        ##if only one, read that
+        #if only one can be read, read that
         if self_read == False:
             if other_read == False:
-                return active_list
+                return None
             else:
-                print_out = other_gene.read_out(concat_dict, active_list)
-                result = active_list.copy()
-                result[other_gene.ident] = other_gene.nodes
+                return other_gene
         else:
             if other_read == False:
-                print_out = self.read_out(concat_dict, active_list)
-                result = active_list.copy()
-                result[self.ident] = self.nodes
-        ##else, check dominance
-        ##if tie, flip a coin (layers do not co-dominate)
+                return self
+        #else, check dominance
+        #if tie, flip a coin (layers do not co-dominate)
             else:
-                result = active_list.copy()
                 if self.dom > other_gene.dom:
-                    print_out = self.read_out(concat_dict, active_list)
-                    result[self.ident] = self.nodes
+                    return self
                 elif other_gene.dom > self.dom:
-                    print_out = other_gene.read_out(concat_dict, active_list)
-                    result[other_gene.ident] = other_gene.nodes
+                    return other_gene
                 else:
-                    choice = random.randint(0, 1)
-                    if choice == 0:
-                        print_out = self.read_out(concat_dict, active_list)
-                        result[self.ident] = self.nodes
-                    else:
-                        print_out = other_gene.read_out(concat_dict,
-                                                        active_list)
-                        result[other_gene.ident] = other_gene.nodes
-        ##output relevant text to file and return changed active_list
-        f = open(read_file, "a")
-        f.write(print_out)
-        f.close()
-        return result
-
-    #helper function for read
+                    return random.choice([self, other_gene])
+                                         
     #a function that produces the string a gene makes for the caffe file
     #this includes any concat layers needed
     #concat_dict entries format:

@@ -200,46 +200,46 @@ class testLayer(unittest.TestCase):
 ##                            ''')
 ##        self.assertEqual(test_loss, self.loss.read_out())
         
-    def test_read(self):
-        dgeann.random.seed("layers")
-        concat_dict = {}
-        #a case where neither is read
-        test_a = self.unread_a.read("temp_file.txt", self.active_list,
-                                    concat_dict, self.unread_b)
-        self.assertEqual(test_a, self.active_list, concat_dict, )
-        #a case where the first is read
-        test_b = self.low_dom_a.read("temp_file.txt", self.active_list,
-                                     concat_dict, self.unread_a)
-        self.assertEqual(test_b, {"cake": 5, "onion": 7, "abcd": 4})
-        #a case where the second is read
-        test_c = self.unread_a.read("temp_file.txt", self.active_list,
-                                    concat_dict, self.low_dom_a)
-        self.assertEqual(test_c, {"cake": 5, "onion": 7, "abcd": 4})
-        #a case where they have the same dom
-        test_d = self.low_dom_a.read("temp_file.txt", self.active_list,
-                                     concat_dict, self.low_dom_b)
-        self.assertEqual(test_d, {"cake": 5, "onion": 7, "efgh": 1})
-        #a case where the first dominates
-        test_e = self.high_dom.read("temp_file.txt", self.active_list,
-                                    concat_dict, self.low_dom_a)
-        self.assertEqual(test_e, {"cake": 5, "onion": 7, "ijkl": 2})
-        #a case where the second dominates
-        test_f = self.low_dom_b.read("temp_file.txt", self.active_list,
-                                     concat_dict, self.high_dom)
-        self.assertEqual(test_f, {"cake": 5, "onion": 7, "ijkl": 2})
-        #a case with no other gene (and two dependencies)
-        test_g = self.multiple_layer.read("temp_file.txt", self.active_list,
-                                          concat_dict)
-        self.assertEqual(test_g, {"cake": 5, "onion": 7, "qrst": 3})
-        #a case with no other gene (and no dependencies)
-        test_h = self.no_inputs.read("temp_file.txt", self.active_list,
-                                     concat_dict)
-        self.assertEqual(test_h, {"cake": 5, "onion": 7, "uvwx": 3})
-        #a case where the other gene has no dependencies
-        test_i = self.low_dom_a.read("temp_file.txt", self.active_list,
-                                     concat_dict, self.no_inputs)
-        self.assertEqual(test_i, {"cake": 5, "onion": 7, "uvwx": 3})
-        os.remove("temp_file.txt")
+##    def test_read(self):
+##        dgeann.random.seed("layers")
+##        concat_dict = {}
+##        #a case where neither is read
+##        test_a = self.unread_a.read("temp_file.txt", self.active_list,
+##                                    concat_dict, self.unread_b)
+##        self.assertEqual(test_a, self.active_list, concat_dict, )
+##        #a case where the first is read
+##        test_b = self.low_dom_a.read("temp_file.txt", self.active_list,
+##                                     concat_dict, self.unread_a)
+##        self.assertEqual(test_b, {"cake": 5, "onion": 7, "abcd": 4})
+##        #a case where the second is read
+##        test_c = self.unread_a.read("temp_file.txt", self.active_list,
+##                                    concat_dict, self.low_dom_a)
+##        self.assertEqual(test_c, {"cake": 5, "onion": 7, "abcd": 4})
+##        #a case where they have the same dom
+##        test_d = self.low_dom_a.read("temp_file.txt", self.active_list,
+##                                     concat_dict, self.low_dom_b)
+##        self.assertEqual(test_d, {"cake": 5, "onion": 7, "efgh": 1})
+##        #a case where the first dominates
+##        test_e = self.high_dom.read("temp_file.txt", self.active_list,
+##                                    concat_dict, self.low_dom_a)
+##        self.assertEqual(test_e, {"cake": 5, "onion": 7, "ijkl": 2})
+##        #a case where the second dominates
+##        test_f = self.low_dom_b.read("temp_file.txt", self.active_list,
+##                                     concat_dict, self.high_dom)
+##        self.assertEqual(test_f, {"cake": 5, "onion": 7, "ijkl": 2})
+##        #a case with no other gene (and two dependencies)
+##        test_g = self.multiple_layer.read("temp_file.txt", self.active_list,
+##                                          concat_dict)
+##        self.assertEqual(test_g, {"cake": 5, "onion": 7, "qrst": 3})
+##        #a case with no other gene (and no dependencies)
+##        test_h = self.no_inputs.read("temp_file.txt", self.active_list,
+##                                     concat_dict)
+##        self.assertEqual(test_h, {"cake": 5, "onion": 7, "uvwx": 3})
+##        #a case where the other gene has no dependencies
+##        test_i = self.low_dom_a.read("temp_file.txt", self.active_list,
+##                                     concat_dict, self.no_inputs)
+##        self.assertEqual(test_i, {"cake": 5, "onion": 7, "uvwx": 3})
+##        os.remove("temp_file.txt")
         
         
     def test_mutate(self):
@@ -349,6 +349,8 @@ class testBuild(unittest.TestCase):
         self.assertEqual(ident, "T125-659-499")
 
     def test_build_layers(self):
+        #TODO put in case where both layers will not be able to be read
+        #and null vs can't be read
         self.l_unread_a.inputs = []
         self.l_unread_a.layer_type = 'data'
         #layers_equalize
@@ -474,39 +476,31 @@ class testBuild(unittest.TestCase):
             self.assertEqual(g7.layerchr_b[i].ident, g7_test_b[i].ident)
         #structure_network
         dgeann.random.seed("evo-devo")
-        g1_list, g1_layout = g1.structure_network({})
-        g2_list, g2_layout = g2.structure_network({})
-        g3_list, g3_layout = g3.structure_network({})
-        g4_list, g4_layout = g4.structure_network({})
-        g5_list, g5_layout = g5.structure_network({})
-        g6_list, g6_layout = g6.structure_network({})
-        g7_list, g7_layout = g7.structure_network({})
+        g1_sub, g1_list, g1_layout = g1.structure_network({})
+        g2_sub, g2_list, g2_layout = g2.structure_network({})
+        g3_sub, g3_list, g3_layout = g3.structure_network({})
+        g4_sub, g4_list, g4_layout = g4.structure_network({})
+        g5_sub, g5_list, g5_layout = g5.structure_network({})
+        g6_sub, g6_list, g6_layout = g6.structure_network({})
+        g7_sub, g7_list, g7_layout = g7.structure_network({})
         g1_testlist = {"askl": 3, "ijkl": 2, "blegh": 5}
         g2_testlist = {"askl": 3, "ijkl": 2, "blegh": 5}
-        #might be other gene
-        g3_testlist = {"askl": 3, "data": 8, "blegh": 5}
-        #might be other gene
-        g4_testlist = {"askl": 3, "data": 8, "blegh": 5}
+        g3_testlist = {"askl": 3, "efgh": 5, "blegh": 5, "ijkl": 2}
+        g4_testlist = {"askl": 3, "data": 8, "blegh": 5, "ijkl": 2}
         g5_testlist = {"askl": 3, "data": 8, "ijkl": 2, "blegh": 5}
-        #might be other gene
-        g6_testlist = {"askl": 3, "G": 2, "I": 2}
-        #might be other I?
+        g6_testlist = {"askl": 3, "H": 2, "I": 2}
         g7_testlist = {"askl": 3, "G": 2, "H": 2, "I": 2}
         g1_testlayout = [self.l_unread_a, self.l_high_dom,
                             self.l_dummy_layer]
         g2_testlayout = [self.l_unread_a, self.l_high_dom,
                             self.l_dummy_layer]
-        #might be other gene
-        g3_testlayout = [self.l_unread_a, self.l_low_dom_a, self.l_high_dom,
+        g3_testlayout = [self.l_unread_a, self.l_low_dom_b, self.l_high_dom,
                          self.l_dummy_layer]
-        #might be other gene
         g4_testlayout = [self.l_unread_a, self.l_low_dom_a, self.l_high_dom,
                          self.l_dummy_layer]
         g5_testlayout = [self.l_unread_a, self.l_low_dom_a, self.l_high_dom,
                          self.l_dummy_layer]
-        #might be other gene
-        g6_testlayout = [self.l_unread_a, IPG, IPI]
-        #might be other I
+        g6_testlayout = [self.l_unread_a, IPH, IPI]
         g7_testlayout = [self.l_unread_a, IPG, IPH, IPI]
         listlists = [g1_list, g2_list, g3_list, g4_list, g5_list, g6_list,
                      g7_list]
