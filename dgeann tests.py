@@ -516,7 +516,8 @@ class testBuild(unittest.TestCase):
             for gene in listlayouts[i]:
                 self.assertEqual(gene.ident, testlayouts[i][j].ident)
                 j += 1
-            
+        self.assertEqual(g6.layerchr_a[2].inputs, ["G"])
+        self.assertEqual(g6_layout[2].inputs, ["H"])
 ##    def test_adjust_weights(self):
 ##        testa = dgeann.weight_gene(1, False, False, 0.0, "a", -0.06807647, 0, 0,
 ##                                   "data", "action")

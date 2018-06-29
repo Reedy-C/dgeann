@@ -246,7 +246,7 @@ class genome(object):
         #then build network structure
         active_list = {}
         concat_dict = {}
-        active_list = self.build_layers(active_list, ident_file)
+        active_list, sub_dict = self.build_layers(active_list, ident_file)
         result = dedent(solv.format(ident_file))
         f = open("temp_solver.txt", "w")
         f.write(result)
@@ -282,14 +282,14 @@ class genome(object):
     #in a file that caffe can read
     #which build then uses to create the caffe network object
     def build_layers(self, active_list, ident_file):
-        #nb note to self: do not forget to deepcopy things
         self.layers_equalize()
         sub_dict, active_list, layout = self.structure_network(active_list)
         if len(self.weightchr_a) != 0:
             self.layout_weights(active_list, sub_dict)
         #read out combined genome
-        #TODO
-        return active_list
+        #for gene in layout:
+            
+        return active_list, sub_dict
 
     #helper function for build_layers
     #makes the two layer chromosomes an equal length
@@ -347,6 +347,11 @@ class genome(object):
             #if gene already there in layout: keep
                 if read_gene == layout[i]:
                     if read_gene.ident != 'null':
+                        layout[i] = copy.deepcopy(read_gene)
+                        for j in range(len(layout[i].inputs)):
+                            if layout[i].inputs[j] in sub_dict:
+                                layout[i].inputs[j] = sub_dict[layout[i].inputs
+                                                               [j]]
                         active_list[read_gene.ident] = read_gene.nodes
                         #orphan_list.append(read_gene.ident)
                         #for j in inputs:
@@ -356,9 +361,14 @@ class genome(object):
                 else:
                     if read_gene.ident != 'null':
                     #keep inputs the same, but sub name in outputs
-                        new_layer = copy.copy(read_gene)
+                        new_layer = copy.deepcopy(read_gene)
                         if layout[i].ident != 'null':
                             new_layer.inputs = layout[i].inputs
+                        for j in range(len(new_layer.inputs)):
+                            if new_layer.inputs[j] in sub_dict:
+                                new_layer.inputs[j] = sub_dict[new_layer.inputs
+                                                               [j]]
+                                #TODO get here in testing
                         sub_dict = {layout[i].ident: new_layer.ident}
                         layout[i] = new_layer
                         #orphan_list.append(layout[i].ident)
@@ -373,9 +383,8 @@ class genome(object):
                 if layout[i].ident != 'null':
                     layout[i] = layer_gene(3, False, False, 0, "null", [],
                                             None, None)
-##            #clear out orphans
-##            #...if I figure how to do so without clearing out
-##            #top-level layers
+        #clear out orphans
+        #...if I figure how to do so without clearing out top-level layers
         #now delete all null layers in chr a, chr b, and layout
         layout[:] = [x for x in layout if x.ident != "null"]
         self.layerchr_a[:] = [x for x in self.layerchr_a if x.ident != "null"]
