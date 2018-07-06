@@ -109,12 +109,15 @@ class genome(object):
     #(which may have different genes on them)
     #chromosome 1: layer genes
     #chromosome 2: weight genes
+    #outs: optional list of output/top-level layers
     #mut_record: record of mutations from parents, if toggled
-    def __init__(self, layerchr_a, layerchr_b, weightchr_a, weightchr_b):
+    def __init__(self, layerchr_a, layerchr_b, weightchr_a, weightchr_b,
+                 outs = None):
         self.layerchr_a = layerchr_a
         self.layerchr_b = layerchr_b
         self.weightchr_a = weightchr_a
         self.weightchr_b = weightchr_b
+        self.outs = outs
         self.mut_record = []
 
     #recombine takes two genomes (this and one other)
@@ -242,11 +245,13 @@ class genome(object):
         self.ident = genome.network_ident()
         if not os.path.exists('Gen files'):
             os.makedirs('Gen files')
-        ident_file = os.path.join('Gen files', self.ident)
+        ident_file = os.path.join('Gen files', self.ident + '.gen')
         #then build network structure
         active_list = {}
         concat_dict = {}
-        active_list, sub_dict = self.build_layers(active_list, ident_file)
+        active_list, concat_dict, sub_dict = self.build_layers(active_list,
+                                                               ident_file,
+                                                               concat_dict)
         result = dedent(solv.format(ident_file))
         f = open("temp_solver.txt", "w")
         f.write(result)
@@ -260,7 +265,7 @@ class genome(object):
         self.concat_adjust(active_list, concat_dict)
         #now change the weights to those specified in genetics
         if len(self.weightchr_a) > 0:
-            self.build_weights(active_list, solver.net)
+            self.build_weights(active_list, solver.net, sub_dict)
         else:
             self.rand_weight_genes(solver.net, concat_dict)
         return solver
@@ -281,15 +286,17 @@ class genome(object):
     #creates the layer stucture of the network
     #in a file that caffe can read
     #which build then uses to create the caffe network object
-    def build_layers(self, active_list, ident_file):
+    def build_layers(self, active_list, ident_file, concat_dict):
         self.layers_equalize()
         sub_dict, active_list, layout = self.structure_network(active_list)
-        if len(self.weightchr_a) != 0:
-            self.layout_weights(active_list, sub_dict)
         #read out combined genome
-        #for gene in layout:
-            
-        return active_list, sub_dict
+        for gene in layout:
+            print_out = gene.read_out(concat_dict, active_list)
+            #print out to file
+            f = open(ident_file, "a")
+            f.write(print_out)
+            f.close()
+        return active_list, concat_dict, sub_dict
 
     #helper function for build_layers
     #makes the two layer chromosomes an equal length
@@ -335,7 +342,7 @@ class genome(object):
         #choose one layer chr to use as layout structure pattern
         layout = copy.copy(random.choice([self.layerchr_a,
                                           self.layerchr_b]))
-        #orphan_list = []
+        orphan_list = []
         sub_dict = {}
         del_list = []
         for i in range(len(self.layerchr_a)):
@@ -348,31 +355,42 @@ class genome(object):
                 if read_gene == layout[i]:
                     if read_gene.ident != 'null':
                         layout[i] = copy.deepcopy(read_gene)
-                        for j in range(len(layout[i].inputs)):
-                            if layout[i].inputs[j] in sub_dict:
-                                layout[i].inputs[j] = sub_dict[layout[i].inputs
-                                                               [j]]
+                        ins = []
+                        for lay in layout[i].inputs:
+                            if lay in sub_dict:
+                                ins.append(sub_dict[lay])
+                            else:
+                                if lay in active_list and lay not in del_list:
+                                    ins.append(lay)
+                        layout[i].inputs[:] = [a for a in ins]
                         active_list[read_gene.ident] = read_gene.nodes
-                        #orphan_list.append(read_gene.ident)
-                        #for j in inputs:
-                        #    if j in orphan_list:
-                        #        orphan_list.remove(j)
+                        orphan_list.append(read_gene.ident)
+                        for j in read_gene.inputs:
+                            if j in orphan_list:
+                                orphan_list.remove(j)
                 #else if other gene, if not null
                 else:
                     if read_gene.ident != 'null':
-                    #keep inputs the same, but sub name in outputs
+                    #keep inputs the same if possible, but sub name in outputs
                         new_layer = copy.deepcopy(read_gene)
                         if layout[i].ident != 'null':
                             new_layer.inputs = layout[i].inputs
-                        for j in range(len(new_layer.inputs)):
-                            if new_layer.inputs[j] in sub_dict:
-                                new_layer.inputs[j] = sub_dict[new_layer.inputs
-                                                               [j]]
-                                #TODO get here in testing
-                        sub_dict = {layout[i].ident: new_layer.ident}
+                        ins = []
+                        for lay in new_layer.inputs:
+                            if lay in sub_dict:
+                                ins.append(sub_dict[lay])
+                            else:
+                                if lay in active_list and lay not in del_list:
+                                    ins.append(lay)
+                        new_layer.inputs[:] = [a for a in ins]
+                        if layout[i].ident != new_layer.ident:
+                            sub_dict = {layout[i].ident: new_layer.ident}
                         layout[i] = new_layer
-                        #orphan_list.append(layout[i].ident)
+                        orphan_list.append(layout[i].ident)
                         active_list[layout[i].ident] = layout[i].nodes
+                        for j in layout[i].inputs:
+                            if j in orphan_list:
+                                orphan_list.remove(j)
                     else:
                         del_list.append(layout[i].ident)
                         layout[i] = read_gene
@@ -384,7 +402,12 @@ class genome(object):
                     layout[i] = layer_gene(3, False, False, 0, "null", [],
                                             None, None)
         #clear out orphans
-        #...if I figure how to do so without clearing out top-level layers
+        if self.outs != None:
+            for i in range(len(layout)):
+                if (layout[i].ident in orphan_list
+                    and layout[i].ident not in self.outs):
+                    layout[i] = layer_gene(3, False, False, 0, "null", [],
+                                                None, None)
         #now delete all null layers in chr a, chr b, and layout
         layout[:] = [x for x in layout if x.ident != "null"]
         self.layerchr_a[:] = [x for x in self.layerchr_a if x.ident != "null"]
@@ -425,7 +448,7 @@ class genome(object):
     #reads the chromosomes that specify the network weights
     #and changes the weights in the created network to those weights
     #takes the list of layers and a network
-    def build_weights(self, active_list, net):
+    def build_weights(self, active_list, net, sub_dict):
         weightchr_a = self.weightchr_a
         weightchr_b = self.weightchr_b
         if len(weightchr_a) < len(weightchr_b):
@@ -444,9 +467,9 @@ class genome(object):
             b = weightchr_b[m]
             if a.in_node == b.in_node:
                 if a.out_node == b.out_node:
-                    values = a.read(active_list, b)
+                    values = a.read(active_list, sub_dict, b)
                     if values is not None:
-                        genome.adjust_weight(net, values)
+                        genome.adjust_weight(net, values, sub_dict)
                     n += 1
                     m += 1
                     if n > a_lim and m <= b_lim:
@@ -458,26 +481,30 @@ class genome(object):
                     #but might as well have a plan if we do
                     if a.in_node == 0 and a.out_node == 0:
                         while b.out_node != 0:
-                            m, b = self.read_through("b", m, active_list, net)
+                            m, b = self.read_through("b", m, active_list, net,
+                                                     sub_dict)
                             if m > b_lim:
                                 longer = self.weightchr_a
                                 break
                     elif b.in_node == 0 and b.out_node == 0:
                         while a.out_node != 0:
-                            n, a = self.read_through("a", n, active_list, net)
+                            n, a = self.read_through("a", n, active_list, net,
+                                                     sub_dict)
                             if n > a_lim:
                                 longer = self.weightchr_b
                                 break
                     else:
                         while a.out_node < b.out_node:
-                            n, a = self.read_through("a", n, active_list, net)
+                            n, a = self.read_through("a", n, active_list, net,
+                                                     sub_dict)
                             if n > a_lim:
                                 longer = self.weightchr_b
                                 break
                             if a.in_node == 0 and a.out_node == 0:
                                 break
                         while b.out_node < a.out_node:
-                            m, b = self.read_through("b", m, active_list, net)
+                            m, b = self.read_through("b", m, active_list, net,
+                                                     sub_dict)
                             if m > b_lim:
                                 longer = self.weightchr_a
                                 break
@@ -487,36 +514,42 @@ class genome(object):
                 #if one is at 0 input/0 output, read the other 'till it catches up
                 if a.in_node == 0 and a.out_node == 0:
                     while b.in_node != 0:
-                        m, b = self.read_through("b", m, active_list, net)
+                        m, b = self.read_through("b", m, active_list, net,
+                                                 sub_dict)
                         if m > b_lim:
                             break
                     if m <= b_lim:
                         while b.out_node != 0:
-                            m, b = self.read_through("b", m, active_list, net)
+                            m, b = self.read_through("b", m, active_list, net,
+                                                     sub_dict)
                             if m > b_lim:
                                 break
                 elif b.in_node == 0 and b.out_node == 0:
                     while a.in_node != 0:
-                        n, a = self.read_through("a", n, active_list, net)
+                        n, a = self.read_through("a", n, active_list, net,
+                                                 sub_dict)
                         if n > a_lim:
                             break
                     if n <= a_lim:
                         while a.out_node != 0:
-                            n, a = self.read_through("a", n, active_list, net)
+                            n, a = self.read_through("a", n, active_list, net,
+                                                     sub_dict)
                             if n > a_lim:
                                 break
                 #if one is at a higher input #, read the other 'till it catches up
                 #or until the other hits 0/0 i/o
                 else:
                     while a.in_node < b.in_node:
-                        n, a = self.read_through("a", n, active_list, net)
+                        n, a = self.read_through("a", n, active_list, net,
+                                                 sub_dict)
                         if n > a_lim:
                             longer = self.weightchr_b
                             break
                         if a.in_node == 0 and a.out_node == 0:
                             break
                     while b.in_node < a.in_node:
-                        m, b = self.read_through("b", m, active_list, net)
+                        m, b = self.read_through("b", m, active_list, net,
+                                                 sub_dict)
                         if m > b_lim:
                             longer = self.weightchr_a
                             break
@@ -531,9 +564,9 @@ class genome(object):
                 else:
                     x = n
                 while x <= (len(longer) - 1):
-                    values = longer[x].read(active_list)
+                    values = longer[x].read(active_list, sub_dict)
                     if values is not None:
-                        genome.adjust_weight(net, values)
+                        genome.adjust_weight(net, values, sub_dict)
                     x += 1
 
     #helper function for build_weights
@@ -541,7 +574,7 @@ class genome(object):
     #and the returned strings from reading a weight gene
     #adjusts the corresponding weight in the net to the specified weight
     @staticmethod
-    def adjust_weight(net, values):
+    def adjust_weight(net, values, sub_dict):
         #values is a list formatted as:
         #input (str), in node, output (str), out node, weight
         #with perhaps another set for a second weight adjustment
@@ -564,15 +597,15 @@ class genome(object):
     #net
     #advances down one chromosome at a time
     #adjusts weights
-    def read_through(self, chro, n, active_list, net):
+    def read_through(self, chro, n, active_list, net, sub_dict):
         if chro == "a":
             chro = self.weightchr_a
         elif chro == "b":
             chro = self.weightchr_b
         a = chro[n]
-        values = a.read(active_list)
+        values = a.read(active_list, sub_dict)
         if values is not None:
-            genome.adjust_weight(net, values)
+            genome.adjust_weight(net, values, sub_dict)
         n += 1
         if n <= (len(chro) - 1):
             a = chro[n]
@@ -814,16 +847,8 @@ class genome(object):
         in_dict = {}
         for g in chro[:(chro.index(gene))]:
             if g.ident in gene.inputs:
-                inp = g
-                break
-        if inp.layer_type == "concat":
-            for g in chro[:(chro.index(inp))]:
-                if g.ident in inp.inputs:
-                    inputs += g.nodes
-                    in_dict[g.ident] = g.nodes
-        else:
-            inputs = inp.nodes
-            in_dict[inp.ident] = inp.nodes
+                inputs += g.nodes
+                in_dict[g.ident] = g.nodes
         return inputs, in_dict
                                
     #helper function for handle_mutation
@@ -954,6 +979,9 @@ class layer_gene(gene):
     def read(self, active_list, other_gene, sub_dict, del_list):
         self_read = True
         other_read = True
+##        print(self.ident, other_gene.ident, sub_dict, del_list, active_list)
+##        print(self.inputs)
+##        print(other_gene.inputs)
         #first, make sure self or other isn't already in active_list
         #or we can get duplicates!
         if self.ident in active_list:
@@ -975,8 +1003,6 @@ class layer_gene(gene):
                                 lay = sub_dict[lay]
                             if lay not in active_list:
                                 self_read = False
-                            else:
-                                self_read = True
             if other_gene.inputs == []:
                 other_read = True
             else:
@@ -990,8 +1016,6 @@ class layer_gene(gene):
                                 lay = sub_dict[lay]
                             if lay not in active_list:
                                 other_read = False
-                            else:
-                                other_read = True
         #if only one can be read, read that
         if self_read == False:
             if other_read == False:
@@ -1118,56 +1142,90 @@ class weight_gene(gene):
         #this is here to deal with concat layers
         self.alt_in = in_node
 
-    def read(self, active_list, other_gene=None):
+    def read(self, active_list, sub_dict, other_gene=None):
         #first check that input and output are in dict (inc. node #) for both
         #if both there, but if only one can be read, read that
         #first check if they can be read
-        self_read = self.can_read(active_list)
+        self_read = self.can_read(active_list, sub_dict)
         if other_gene is not None:
-            other_read = other_gene.can_read(active_list)
+            other_read = other_gene.can_read(active_list, sub_dict)
         else:
             other_read = False
         if self_read == False:
             if other_read == False:
                 return None
-            return [other_gene.in_layer, other_gene.alt_in, other_gene.out_layer,
+            if other_gene.in_layer in sub_dict:
+                in_lay = sub_dict[other_gene.in_layer]
+            else:
+                in_lay = other_gene.in_layer
+            if other_gene.out_layer in sub_dict:
+                out_lay = sub_dict[other_gene.out_layer]
+            else:
+                out_lay = other_gene.out_layer
+            return [in_lay, other_gene.alt_in, out_lay,
                     other_gene.out_node, other_gene.weight]
         else:
-            if other_read == False:
-                return [self.in_layer, self.alt_in, self.out_layer,
-                        self.out_node, self.weight]
-            #if both can be read AND they are NOT for the same input/output, read both
+            if self.in_layer in sub_dict:
+                s_in_lay = sub_dict[self.in_layer]
             else:
-                if (self.in_layer == other_gene.in_layer and
-                    self.out_layer == other_gene.out_layer):
-                    #else, if both read AND they are for the same input/output, check dom
+                s_in_lay = self.in_layer
+            if self.out_layer in sub_dict:
+                s_out_lay = sub_dict[self.out_layer]
+            else:
+                s_out_lay = self.out_layer
+            if other_read == False:
+                return [s_in_lay, self.alt_in, s_out_lay, self.out_node,
+                        self.weight]
+            #if both can be read AND they are NOT for the same input/output,
+            #read both
+            else:
+                if other_gene.in_layer in sub_dict:
+                    o_in_lay = sub_dict[other_gene.in_layer]
+                else:
+                    o_in_lay = other_gene.in_layer
+                if other_gene.out_layer in sub_dict:
+                    o_out_lay = sub_dict[other_gene.out_layer]
+                else:
+                    o_out_lay = other_gene.out_layer
+                if (s_in_lay == o_in_lay and
+                    s_out_lay == o_out_lay):
+                    #else, if both read AND they are for the same input/output,
+                    #check dom
                     #if same, can co-dominate (average values)
                     if (self.in_node == other_gene.in_node
                         and self.out_node == other_gene.out_node):
                         if self.dom < other_gene.dom:
-                            return [other_gene.in_layer, other_gene.alt_in,
-                                    other_gene.out_layer, other_gene.out_node,
+                            return [o_in_lay, other_gene.alt_in,
+                                    o_out_lay, other_gene.out_node,
                                     other_gene.weight]
                         elif self.dom > other_gene.dom:
-                            return [self.in_layer, self.alt_in, self.out_layer,
+                            return [s_in_lay, self.alt_in, s_out_lay,
                                     self.out_node, self.weight]
                         else:
-                            average = (self.weight + other_gene.weight)/2
-                            return [self.in_layer, self.alt_in, self.out_layer,
-                                    self.out_node, average]
+                            return [s_in_lay, self.alt_in, s_out_lay,
+                                    self.out_node, (self.weight +
+                                                    other_gene.weight)/2]
                 #reading both if not same
-                return [self.in_layer, self.alt_in, self.out_layer, self.out_node,
-                        self.weight, other_gene.in_layer, other_gene.alt_in,
-                        other_gene.out_layer, other_gene.out_node, other_gene.weight]
+                return [s_in_lay, self.alt_in, s_out_lay, self.out_node,
+                        self.weight, o_in_lay, other_gene.alt_in,
+                        o_out_lay, other_gene.out_node, other_gene.weight]
 
-    def can_read(self, active_list):
+    def can_read(self, active_list, sub_dict):
         result = False
         #check if input/output layers exist
-        if self.in_layer in active_list:
-            if self.out_layer in active_list:
+        if self.in_layer in sub_dict:
+            in_layer = sub_dict[self.in_layer]
+        else:
+            in_layer = self.in_layer
+        if self.out_layer in sub_dict:
+            out_layer = sub_dict[self.out_layer]
+        else:
+            out_layer = self.out_layer
+        if in_layer in active_list:
+            if out_layer in active_list:
                 #now check in/out nodes
-                if active_list[self.in_layer] >= (self.in_node + 1):
-                    if active_list[self.out_layer] >= (self.out_node + 1):
+                if active_list[in_layer] >= (self.in_node + 1):
+                    if active_list[out_layer] >= (self.out_node + 1):
                         result = True
         return result
 
