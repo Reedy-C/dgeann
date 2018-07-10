@@ -287,7 +287,13 @@ class genome(object):
     #in a file that caffe can read
     #which build then uses to create the caffe network object
     def build_layers(self, active_list, ident_file, concat_dict):
-        self.layers_equalize()
+        if len(self.layerchr_b) != 0:
+            self.layers_equalize()
+        else:
+            for i in range(len(self.layerchr_a)):
+                self.layerchr_b.append(layer_gene(0, False, False, 0, "null",
+                                                  [], None, None))
+                i += 1
         sub_dict, active_list, layout = self.structure_network(active_list)
         #read out combined genome
         for gene in layout:
