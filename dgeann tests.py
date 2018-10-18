@@ -1739,8 +1739,8 @@ class testRecombination(unittest.TestCase):
             self.assertEqual(recomb_a.weightchr_b[x].ident,
                              self.genome_a.weightchr_b[x].ident)
         recomb_b = self.genome_a.recombine(self.genome_k)
-        self.assertEqual(len(recomb_b.layerchr_b), 5)
-        self.assertEqual(len(recomb_b.layerchr_a), 6)
+        self.assertEqual(len(recomb_b.layerchr_b), 6)
+        self.assertEqual(len(recomb_b.layerchr_a), 5)
         self.assertEqual(len(recomb_b.weightchr_a), 4)
         self.assertEqual(len(recomb_b.weightchr_b), 8)
         for gene in recomb_b.weightchr_a:

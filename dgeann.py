@@ -127,14 +127,28 @@ class genome(object):
         parent_one = self.crossover()
         parent_two = other_genome.crossover()
         #then randomly pick chromosome for layers and weights from each
-        layer_one = random.sample([parent_one.layerchr_a, parent_two.layerchr_a], 1)
-        layer_two = random.sample([parent_one.layerchr_b, parent_two.layerchr_b], 1)
-        weight_one = random.sample([parent_one.weightchr_a, parent_two.weightchr_a], 1)
-        weight_two = random.sample([parent_one.weightchr_b, parent_two.weightchr_b], 1)
-        layer_one = copy.deepcopy(layer_one[0])
-        layer_two = copy.deepcopy(layer_two[0])
-        weight_one = copy.deepcopy(weight_one[0])
-        weight_two = copy.deepcopy(weight_two[0])
+        layers = random.randint(0, 1)
+        if layers == 0:
+            layer_one = parent_one.layerchr_a
+            layer_two = parent_two.layerchr_b
+        else:
+            layer_one = parent_one.layerchr_b
+            layer_two = parent_two.layerchr_a
+        weights = random.randint(0, 1)
+        if weights == 0:
+            weight_one = parent_one.weightchr_a
+            weight_two = parent_two.weightchr_b
+        else:
+            weight_one = parent_one.weightchr_b
+            weight_two = parent_two.weightchr_a
+##        layer_one = random.sample([parent_one.layerchr_a, parent_two.layerchr_a], 1)
+##        layer_two = random.sample([parent_one.layerchr_b, parent_two.layerchr_b], 1)
+##        weight_one = random.sample([parent_one.weightchr_a, parent_two.weightchr_a], 1)
+##        weight_two = random.sample([parent_one.weightchr_b, parent_two.weightchr_b], 1)
+        layer_one = copy.deepcopy(layer_one)
+        layer_two = copy.deepcopy(layer_two)
+        weight_one = copy.deepcopy(weight_one)
+        weight_two = copy.deepcopy(weight_two)
         for gen in weight_one:
             gen.alt_in = gen.in_node
         for gen in weight_two:
