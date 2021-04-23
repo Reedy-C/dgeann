@@ -1,10 +1,12 @@
+import copy
+import math
+import os
 import random
 from textwrap import dedent
-import os
-import math
+
 import caffe
 import numpy
-import copy
+
 
 #default solver
 solv = '''\
@@ -102,15 +104,16 @@ record_muts = True
 
         
 class genome(object):
+    """Genome defining a neural network.
 
-    #a genome is a list of lists of genes
-    #referred to as chromosomes
-    #these genomes are diploid, so two copies of each chromosome
-    #(which may have different genes on them)
-    #chromosome 1: layer genes
-    #chromosome 2: weight genes
-    #outs: optional list of output/top-level layers
-    #mut_record: record of mutations from parents, if toggled
+    A genome is a list of lists of genes referred to as chromosomes.
+    These genomes are diploid, so there are two copies of each chromosome,
+    which may have different genes on them.
+    Chromosome pair 1: layer genes; pair 2: weight genes.
+    Outs: optional list of output/top-level layers.
+    Mut_record: record of mutations from parents, if toggled.
+    """
+
     def __init__(self, layerchr_a, layerchr_b, weightchr_a, weightchr_b,
                  outs = None):
         self.layerchr_a = layerchr_a
@@ -120,9 +123,9 @@ class genome(object):
         self.outs = outs
         self.mut_record = []
 
-    #recombine takes two genomes (this and one other)
-    #and produces a new mixed-up child genome
     def recombine(self, other_genome):
+        """Return a new child genome from two parent genomes.
+        """
         #first we need to do crossover on each genome
         parent_one = self.crossover()
         parent_two = other_genome.crossover()
@@ -158,12 +161,12 @@ class genome(object):
         child.mutate()
         return child
 
-    #crosses over every pair of chromosomes
-    #returns a new genome
-    #n = last possible point of crossover for layer chros
-    #m = last possible point of crossover for weight chros
     def crossover(self):
+        """Return a new genome with both pairs of chromosomes crossed over.
+        """
         if constrain_crossover:
+            #n = last possible point of crossover for layer chros
+            #m = last possible point of crossover for weight chros
             n, m = self.last_shared()
         else:
             n = min(len(self.layerchr_a)-1, len(self.layerchr_b)-1)
@@ -202,10 +205,13 @@ class genome(object):
         return result
 
     #helper function for crossover
-    #it finds the last possible crossover points
-    #trying to minimize the wrecking of future evolved structures here
-    #hence why it's not just randint(0, len(chromosome)-1)
     def last_shared(self):
+        """Return the last possible crossover points for layer and weight
+        chromosomes.
+
+        Tries to minimize the wrecking of possible evolved layer strucutres,
+        hence why it's not just randint(0, len(chromosome)-1).
+        """
         n = 0
         m = min(len(self.weightchr_a), len(self.weightchr_b))
         last_layer = ""
@@ -247,14 +253,13 @@ class genome(object):
                 break
         return n, m
 
-    #build a new network from the genome
-    #delete: if true, deletes generated network files
-    #set to False if you want eg a record of how the network structure
-    #changed network-by-network
-    #returns the solver that contains the network built from genome
     #TODO is it possible to simplify and get rid of active_list
     #   given that I now know that list(t._layer/blob_names) exists?
     def build(self, delete=True):
+        """Return the solver for the PyCaffe network from the genome.
+
+        Delete: if true, deletes the generated solver files.
+        """
         #first, generate a new ID for the network
         self.ident = genome.network_ident()
         if not os.path.exists('Gen files'):
@@ -284,9 +289,10 @@ class genome(object):
             self.rand_weight_genes(solver.net, concat_dict)
         return solver
 
-    #returns a string that becomes a network's unique ID
     @staticmethod
     def network_ident():
+        """Return a string that becomes a network's unique ID.
+        """
         ident = ""
         while len(ident) != 11:
             if len(ident) == 3 or len(ident) == 7:
@@ -297,12 +303,13 @@ class genome(object):
         return ident
 
     #helper function for build
-    #creates the layer stucture of the network
-    #in a file that caffe can read
-    #which build then uses to create the caffe network object
     def build_layers(self, active_list, ident_file, concat_dict):
+        """Create the file with the layer structure of the network
+        defined by the genome, and return active_list, concat_dict, and sub_dict.
+        """
         if len(self.layerchr_b) != 0:
             self.layers_equalize()
+        #(if genome is actually haploid)
         else:
             for i in range(len(self.layerchr_a)):
                 self.layerchr_b.append(layer_gene(0, False, False, 0, "null",
@@ -319,9 +326,10 @@ class genome(object):
         return active_list, concat_dict, sub_dict
 
     #helper function for build_layers
-    #makes the two layer chromosomes an equal length
-    #by inserting 'null' layers into the shorter one if necessary
     def layers_equalize(self):
+        """Force the two layer chromosomes to be an equal length by
+        inserting null layers into the shorter one.
+        """
         if len(self.layerchr_a) != len(self.layerchr_b):
             #print(len(self.layerchr_a), len(self.layerchr_b))
             n = 0
@@ -356,9 +364,11 @@ class genome(object):
             self.layerchr_b.reverse()
 
     #helper function for build_layers
-    #returns a list of genes that are ready to be turned into a network file
-    #and active_list ({layer: # nodes})
     def structure_network(self, active_list):
+        """Return a list of genes that are ready to be turned into a
+        Caffe network file, active_list ({layer: # nodes}), and substitution
+        dictionary.
+        """
         #choose one layer chr to use as layout structure pattern
         layout = copy.copy(random.choice([self.layerchr_a,
                                           self.layerchr_b]))
@@ -434,14 +444,10 @@ class genome(object):
         self.layerchr_b[:] = [x for x in self.layerchr_b if x.ident != "null"]
         return sub_dict, active_list, layout
 
-    #this is here to deal with what happens when we have concat layers
-    #if a and b are concatted and fed to c, a is okay
-    #but any b->c weight genes won't work right
-    #since 0 in b is now offset by len(a)
-    #(for the purposes of weights at least)
-    #easiest option seems to be 'adjust the inputs'?
-    #also needs to handle d->c,e->c,f->c, a->g...
     def concat_adjust(self, active_list, concat_dict):
+        """Adjust offsets for weight gene input nodes when concat layers
+        exist, so that the correct weights are adjusted in the final network.
+        """
         #probably not the fastest way to do this
         for weight in self.weightchr_a:
             for key in concat_dict:
@@ -465,10 +471,10 @@ class genome(object):
                             n += lay
                         weight.alt_in = n + weight.in_node
 
-    #reads the chromosomes that specify the network weights
-    #and changes the weights in the created network to those weights
-    #takes the list of layers and a network
     def build_weights(self, active_list, net, sub_dict):
+        """Change the weights in the created network to those defined
+        by the weight genes.
+        """
         weightchr_a = self.weightchr_a
         weightchr_b = self.weightchr_b
         if len(weightchr_a) < len(weightchr_b):
@@ -590,11 +596,11 @@ class genome(object):
                     x += 1
 
     #helper function for build_weights
-    #takes the caffe network
-    #and the returned strings from reading a weight gene
-    #adjusts the corresponding weight in the net to the specified weight
     @staticmethod
     def adjust_weight(net, values, sub_dict):
+        """Change an individual weight in the network to that specified
+        by a particular pair of weight genes.
+        """
         #values is a list formatted as:
         #input (str), in node, output (str), out node, weight
         #with perhaps another set for a second weight adjustment
@@ -612,12 +618,10 @@ class genome(object):
             net.params[output][0].data[out_node][in_node] = weight
             
     #helper function for build_weights
-    #takes weight chromosome, n (position of gene in chromosome)
-    #active_list
-    #net
-    #advances down one chromosome at a time
-    #adjusts weights
     def read_through(self, chro, n, active_list, net, sub_dict):
+        """Adjusts weight genes while reading through one chromosome at a time,
+        and returns position of last read gene and the gene itself.
+        """
         if chro == "a":
             chro = self.weightchr_a
         elif chro == "b":
@@ -632,12 +636,13 @@ class genome(object):
         return n, a
 
     #helper function for build
-    #starts with a random network
-    #turns the random weights into weight genes that are added to both
-    #chromosomes and given random dominance
-    #(can be different for either copy on either chromosome)
     #TODO return?
     def rand_weight_genes(self, net, concat_dict):
+        """Create a network with random weights and create weight genes for
+        both chromosomes based on those weights.
+
+        Both are given the same weights, but with random dominance.
+        """
         for key in net.params:
             d = net.params[key][0].data
             if type(d[0]) == numpy.ndarray:
@@ -657,11 +662,13 @@ class genome(object):
                     self.create_rweights(in_layer, d, key, net)
 
     #helper function for rand_weight_genes
-    #helps sort out concats... again
     #t is net
     #d is the weight array of the OUTPUT layer
     #TODO more elegant way to do this?
     def concat_rweights(self, net, in_layer, d, out_layer, concat_dict, off=0):
+        """Return weight genes with offsets already adjusted for randomized
+        network.
+        """
         #current layer is a concat layer; now we need to check *its* inputs
         ins_left = list(net._blob_names)[
                     list(net._bottom_ids(
@@ -697,6 +704,9 @@ class genome(object):
     #creates and appends all weight genes
     #d is the weight array of the OUTPUT layer
     def create_rweights(self, in_layer, d, out_layer, net, off=0):
+        """Create all weight genes in a random network and add them to
+        weight chromosomes, and return new offset number.
+        """
         if len(net.blobs[in_layer].data.shape) == 4:
             limit = net.blobs[in_layer].data.shape[3]
         else:
@@ -716,8 +726,9 @@ class genome(object):
             new_off += 1
         return new_off
 
-    #run through all genes to see if any mutate
     def mutate(self):
+        """Handle mutation checks for all genes.
+        """
         for layer in self.layerchr_a:
             result = layer.mutate()
             if result is not "":
@@ -735,8 +746,10 @@ class genome(object):
             if result is not "":
                 self.handle_mutation(result, weight, "b", self.weightchr_b)
 
-    #implements changes to genes from mutations
+    #helper function for mutate
     def handle_mutation(self, result, gene, c, chro=None):
+        """Handle changing a gene that has been mutated.
+        """
         #this could be more complicated to take into account whether
         #the mutation actually changes anything, but keeping it simple for now
         if record_muts:
@@ -775,10 +788,11 @@ class genome(object):
                                n_in)
                 gene.nodes += int(result[7])
                 
-    #generates a six-character alphabetical string to use as a gene identifier
-    #TODO move?
     @staticmethod
     def gene_ident():
+        """Generate a six-character alphabetical string to use as
+        a gene identifier.
+        """
         letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         ident = ""
         while len(ident) < 6:
@@ -786,8 +800,9 @@ class genome(object):
         return ident
 
     #helper function for handle_mutation
-    #it handles duplication mutations
     def handle_duplication(self, gene, chro):
+        """Handle duplication mutations.
+        """
         #first we make a new ident
         new_id = genome.gene_ident()
         #then copy the gene
@@ -802,10 +817,11 @@ class genome(object):
         self.dup_weights(new_gene, out_gene, chro)
 
     #helper function for handle_duplication
-    #finds a gene that can use a new gene as input
-    #because of how caffe works, for the sake of simplicity in genome reading
-    #this can only be a gene that comes _after_ the new gene
     def new_input(self, gene, chro):
+        """Return an existing gene that will take a new gene as input.
+        Because of how Caffe works, this an only be a gene that comes
+        after the new one.
+        """
         potential = []
         for g in chro[(chro.index(gene)+1):]:
             if g.layer_type == "IP":
@@ -813,8 +829,9 @@ class genome(object):
         return(potential[random.randint(0, len(potential)-1)])
 
     #helper function for handle_duplication
-    #when adding a new layer, it makes the relevant new weight genes
     def dup_weights(self, new_gene, out_gene, chro):
+        """Create the relevant new weight genes for a duplicated layer.
+        """
         new_weights = []
         inputs = 0
         in_dict = {}
@@ -859,10 +876,11 @@ class genome(object):
             self.weightchr_b.append(gene)
 
     #helper function for add_nodes
-    #returns total inputs to gene (adds together concat inputs)
-    #also returns a dict (dict[layer_name] = layer_nodes)
     #TODO: can I simplify this with the functions I just learned about?
     def find_n_inputs(self, gene, chro):
+        """Return the total number of input layers to a layer gene
+        and a dict of how many nodes each layer has.
+        """
         inputs = 0
         in_dict = {}
         for g in chro[:(chro.index(gene))]:
@@ -872,11 +890,10 @@ class genome(object):
         return inputs, in_dict
                                
     #helper function for handle_mutation
-    #when adding nodes to a layer, it deals with adding new weight genes
-    #unlike other helper functions for handle_mutation, it works on only one
-    #weight chromosome at a time and does not change the gene
-    #(handle_mutation does)
     def add_nodes(self, gene, chro, new_nodes, weight_chr, n_in):
+        """Create new weight genes when nodes are added to a layer. Only
+        works on one weight chromosome.
+        """
         #the way this is written is intended to deal with two things
         #(1) edge case where nodes were larger in past, reduced, and are now
         #expanded again (e.g. 4 nodes -> 2 nodes -> adding two nodes)
@@ -939,10 +956,11 @@ class genome(object):
                         done_ins[g.in_layer] = [g.in_node]
 
     #helper function for add_nodes
-    #returns a list of layers that gene outputs to
-    #this is used for weights, so any concats are traced to their outputs
     #TODO: can I simplify this with the functions I just learned about?
     def find_outputs(self, gene, chro):
+        """Return a list of layers that a layer gene outputs to. Used when
+        adding weights so that concat layers are traced to their outputs.
+        """
         out_list = []
         concats = []
         for g in chro:
@@ -958,12 +976,15 @@ class genome(object):
    
              
 class gene(object):
+    """Unit of information that populates a genome chromosome.
+    
+    dom: dominance rating (int, 1~5)
+    can_mut: can it mutate? (bool)
+    can_dup: can it be duplicated? (bool)
+    mut_rate: mutation rate (float)
+    ident: gene ID (str)
+    """
 
-    #dom = dominance rating (int, 1~5)
-    #can_mut = can it mutate? (bool)
-    #can_dup = can it be duplicated? (bool)
-    #mut_rate = mutation rate (float)
-    #ident = gene ID (str)
     def __init__(self, dom, can_mut, can_dup, mut_rate, ident):
         self.dom = dom
         self.can_mut = can_mut
@@ -973,22 +994,30 @@ class gene(object):
 
     #defined in subclasses
     def mutate(self):
+        """Return if and how a gene mutates.
+        """
         pass
 
     #defined in subclasses
-    #active_list = a dict of layers used to build network: # nodes in layer
-    #other_gene = equivalent gene on other chromosome,
-    #               used to determine phenotype
-    #read_file = .gen file that is printed to, later read into caffe to make net
     def read(self, active_list, other_gene, read_file):
+        """Return which of a pair of genes (or what median result)
+        is used to create the final network.
+
+        active_list: a dict of layers used to build network: # nodes in layer.
+        other_gene: equivalent gene on other chromosome.
+        read_file: .gen file that is printed to, then read to make net.
+        """
         pass
 
 
 class layer_gene(gene):
+    """Defines a Caffe network layer.
 
-    #inputs is a list of strings that are inputs to this layer
-    #nodes is an int (number of nodes this layer has OR None for concat layers)
-    #layer type is a string
+    inputs: a list of strings that are inputs to this layer.
+    nodes: an int (number of nodes this layer has) OR None )for concat layers).
+    layer_type: a string defining the layer type
+    """
+    
     def __init__(self, dom, can_mut, can_dup, mut_rate, ident, inputs, nodes,
                  layer_type):
         super(layer_gene, self).__init__(dom, can_mut, can_dup, mut_rate, ident)
@@ -997,11 +1026,11 @@ class layer_gene(gene):
         self.layer_type = layer_type
 
     def read(self, active_list, other_gene, sub_dict, del_list):
+        """Overrides read from base gene class. Returns either this gene
+        or other_gene to be used in creating the network.
+        """
         self_read = True
         other_read = True
-##        print(self.ident, other_gene.ident, sub_dict, del_list, active_list)
-##        print(self.inputs)
-##        print(other_gene.inputs)
         #first, make sure self or other isn't already in active_list
         #or we can get duplicates!
         if self.ident in active_list:
@@ -1055,12 +1084,13 @@ class layer_gene(gene):
                 else:
                     return random.choice([self, other_gene])
                                          
-    #a function that produces the string a gene makes for the caffe file
-    #this includes any concat layers needed
     #concat_dict entries format:
     #concat: [[in_layer1.ident, in_layer2.ident...][in_layer1.nodes,
     #       in_layer2.nodes...][out_layer1.ident, out_layer2.ident...]]
     def read_out(self, concat_dict, active_list):
+        """Return a string with the layer parameters for the caffe file,
+        including any necessary concat layers.
+        """
         #if more than one input, need concat layers
         if len(self.inputs) > 1:
             in_con = None
@@ -1096,6 +1126,9 @@ class layer_gene(gene):
         return result
 
     def mutate(self):
+        """Overrides mutate from base gene class. Return a string with
+        whether and how the gene mutates.
+        """
         if not self.can_mut:
             return ""
         else:
@@ -1107,6 +1140,8 @@ class layer_gene(gene):
                 return result
 
     def determine_mutation(self):
+        """Return the result from a mutation event.
+        """
         roll = random.random()
         #mutate dom
         if roll < layer_mut_probs[0]:
@@ -1146,10 +1181,13 @@ class layer_gene(gene):
         return result
     
 class weight_gene(gene):
+    """Defines a single weight in the Caffe network.
 
-    #weight = weight that this gene codes for (float)
-    #in/out node = input node from input layer, output node in output layer (int)
-    #in/out layer = input/output layer (str)
+    weight: weight value that this gene codes for (float)
+    in/out_node: input node from input layer, output node in output layer (int)
+    in/out_layer: input/output layer ID (str)
+    """
+    
     def __init__(self, dom, can_mut, can_dup, mut_rate, ident, weight, in_node,
                  out_node, in_layer, out_layer):
         super(weight_gene, self).__init__(dom, can_mut, can_dup,
@@ -1163,6 +1201,10 @@ class weight_gene(gene):
         self.alt_in = in_node
 
     def read(self, active_list, sub_dict, other_gene=None):
+        """Overrides read from base gene class. Returns either this gene
+        or other_gene, or an average weight if they co-dominate,
+        to be used in creating the network.
+        """
         #first check that input and output are in dict (inc. node #) for both
         #if both there, but if only one can be read, read that
         #first check if they can be read
@@ -1231,6 +1273,8 @@ class weight_gene(gene):
                         o_out_lay, other_gene.out_node, other_gene.weight]
 
     def can_read(self, active_list, sub_dict):
+        """Return whether this gene defines an existing weight in the network.
+        """
         result = False
         #check if input/output layers exist
         if self.in_layer in sub_dict:
@@ -1250,6 +1294,9 @@ class weight_gene(gene):
         return result
 
     def mutate(self):
+        """Overrides mutate from base gene class. Return a string with
+        whether and how the gene mutates.
+        """
         if not self.can_mut:
             return ""
         else:
@@ -1261,6 +1308,8 @@ class weight_gene(gene):
                 return result
 
     def determine_mutation(self):
+        """Return the result from a mutation event.
+        """
         roll = random.random()
         if roll < weight_mut_probs[0]:
             #change weight
@@ -1288,11 +1337,18 @@ class weight_gene(gene):
 
 
 class haploid_genome(genome):
+    """Haploid genome defining a neural network.
+
+    The second layer/weight chromosomes are left blank.
+    """
 
     def __init__(self, layerchr, weightchr):
         super().__init__(layerchr, [], weightchr, [])
 
     def recombine(self, other_genome):
+        """Overrides recombine from base genome class. Returns a new
+        child genome from two parent genomes.
+        """
         #first, do 'crossover' b/w the two genomes
         #hm... could we cheat here real quick:
         self.layerchr_b = other_genome.layerchr_a
