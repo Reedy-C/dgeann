@@ -144,10 +144,6 @@ class genome(object):
         else:
             weight_one = parent_one.weightchr_b
             weight_two = parent_two.weightchr_a
-##        layer_one = random.sample([parent_one.layerchr_a, parent_two.layerchr_a], 1)
-##        layer_two = random.sample([parent_one.layerchr_b, parent_two.layerchr_b], 1)
-##        weight_one = random.sample([parent_one.weightchr_a, parent_two.weightchr_a], 1)
-##        weight_two = random.sample([parent_one.weightchr_b, parent_two.weightchr_b], 1)
         layer_one = copy.deepcopy(layer_one)
         layer_two = copy.deepcopy(layer_two)
         weight_one = copy.deepcopy(weight_one)
@@ -701,11 +697,11 @@ class genome(object):
         return off
 
     #helper function for rand_weight_genes
-    #creates and appends all weight genes
-    #d is the weight array of the OUTPUT layer
     def create_rweights(self, in_layer, d, out_layer, net, off=0):
         """Create all weight genes in a random network and add them to
         weight chromosomes, and return new offset number.
+
+        d: weight array of the output layer.
         """
         if len(net.blobs[in_layer].data.shape) == 4:
             limit = net.blobs[in_layer].data.shape[3]
@@ -1026,8 +1022,10 @@ class layer_gene(gene):
         self.layer_type = layer_type
 
     def read(self, active_list, other_gene, sub_dict, del_list):
-        """Overrides read from base gene class. Returns either this gene
-        or other_gene to be used in creating the network.
+        """Return either this gene or other_gene to be used in creating
+        the network.
+
+        Overrides read from base gene class. 
         """
         self_read = True
         other_read = True
@@ -1126,8 +1124,9 @@ class layer_gene(gene):
         return result
 
     def mutate(self):
-        """Overrides mutate from base gene class. Return a string with
-        whether and how the gene mutates.
+        """Return a string with whether and how the gene mutates.
+
+        Overrides mutate from base gene class.
         """
         if not self.can_mut:
             return ""
@@ -1201,9 +1200,10 @@ class weight_gene(gene):
         self.alt_in = in_node
 
     def read(self, active_list, sub_dict, other_gene=None):
-        """Overrides read from base gene class. Returns either this gene
-        or other_gene, or an average weight if they co-dominate,
-        to be used in creating the network.
+        """Return either this gene or other_gene, or an average weight
+        if they co-dominate, to be used in creating the network.
+
+        Overrides read from base gene class. 
         """
         #first check that input and output are in dict (inc. node #) for both
         #if both there, but if only one can be read, read that
@@ -1275,7 +1275,6 @@ class weight_gene(gene):
     def can_read(self, active_list, sub_dict):
         """Return whether this gene defines an existing weight in the network.
         """
-        result = False
         #check if input/output layers exist
         if self.in_layer in sub_dict:
             in_layer = sub_dict[self.in_layer]
@@ -1290,12 +1289,13 @@ class weight_gene(gene):
                 #now check in/out nodes
                 if active_list[in_layer] >= (self.in_node + 1):
                     if active_list[out_layer] >= (self.out_node + 1):
-                        result = True
-        return result
+                        return True
+        return False
 
     def mutate(self):
-        """Overrides mutate from base gene class. Return a string with
-        whether and how the gene mutates.
+        """Return a string with whether and how the gene mutates.
+
+        Overrides mutate from base gene class.
         """
         if not self.can_mut:
             return ""
@@ -1346,8 +1346,9 @@ class haploid_genome(genome):
         super().__init__(layerchr, [], weightchr, [])
 
     def recombine(self, other_genome):
-        """Overrides recombine from base genome class. Returns a new
-        child genome from two parent genomes.
+        """Return a new child genome from two parent genomes.
+
+        Overrides recombine from base genome class. 
         """
         #first, do 'crossover' b/w the two genomes
         #hm... could we cheat here real quick:
