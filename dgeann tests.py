@@ -134,84 +134,55 @@ class testLayer(unittest.TestCase):
                                                 [], 5, "")
         self.data = dgeann.LayerGene(5, False, False, 0, "data",
                                         [], 9, "input")
-        self.reward = dgeann.LayerGene(5, False, False, 0, "reward",
-                                         [], 6, "input")
         self.stm_input = dgeann.LayerGene(5, False, False, 0, "stm_input",
                                              ["data", "reward"], 6, "input")
         self.stm = dgeann.LayerGene(5, False, False, 0, "STM",
                                        ["stm_input"], 6, "STMlayer")
-        self.concat = dgeann.LayerGene(5, False, False, 0, "concat_0",
-                                          ["data", "STM"], None, "concat")
         self.action = dgeann.LayerGene(5, False, False, 0, "action",
-                                          ["concat_0"], 6, "IP")
-        self.loss = dgeann.LayerGene(5, False, False, 0, "loss",
-                                        ["action", "reward"], 5, "loss")
+                                          ["data", "STM"], 6, "IP")
         
-##    def test_makestring(self):
-##        test_data = dedent("""\
-##                            input: \"data\"
-##                            input_shape: {
-##                              dim: 1
-##                              dim: 1
-##                              dim: 1
-##                              dim: 9
-##                            }
-##                            """)
-##        self.assertEqual(test_data, self.data.read_out())
-##        test_reward = dedent("""\
-##                        input: "reward"
-##                        input_shape: {
-##                          dim: 1
-##                          dim: 1
-##                          dim: 1
-##                          dim: 6
-##                        }
-##                        """)
-##        self.assertEqual(test_reward, self.reward.read_out())
-##        test_concat = dedent('''\
-##                        layer {
-##                          name: "concat_0"
-##                          type: "Concat"
-##                          bottom: "data"
-##                          bottom: "STM"
-##                          top: "concat_0"
-##                          concat_param {
-##                            axis: 3
-##                          }
-##                        }
-##                        ''')
-##        self.assertEqual(test_concat, self.concat.read_out())
-##        test_action = dedent('''\
-##                        layer {
-##                          name: "action"
-##                          type: "InnerProduct"
-##                          param { lr_mult: 1 decay_mult: 1}
-##                          param { lr_mult: 2 decay_mult: 0}
-##                          inner_product_param {
-##                            num_output: 6
-##                            weight_filler {
-##                              type: "xavier"
-##                            }
-##                            bias_filler {
-##                              type: "constant"
-##                              value: 0
-##                            }
-##                          }
-##                          bottom: "concat_0"
-##                          top: "action"
-##                        }
-##                        ''')
-##        self.assertEqual(test_action, self.action.read_out())
-##        test_loss = dedent('''\
-##                            layer {
-##                              name: "loss"
-##                              type: "EuclideanLoss"
-##                              bottom: "action"
-##                              bottom: "reward"
-##                              top: "loss"
-##                            }
-##                            ''')
-##        self.assertEqual(test_loss, self.loss.read_out())
+    def test_makestring(self):
+        test_data = dedent("""\
+                            input: \"data\"
+                            input_shape: {
+                              dim: 1
+                              dim: 9
+                            }
+                            """)
+        self.assertEqual(test_data, self.data.read_out({}, {}))
+        test_action = dedent('''\
+                    layer {
+                      name: "QEXMQE"
+                      type: "Concat"
+
+                      bottom: "data"
+                      bottom: "STM"
+                      top: "QEXMQE"
+                      concat_param {
+                        axis: 1
+                      }
+                    }
+                    layer {
+                      name: "action"
+                      type: "InnerProduct"
+                      param { lr_mult: 1 decay_mult: 1}
+                      param { lr_mult: 2 decay_mult: 0}
+                      inner_product_param {
+                        num_output: 6
+                        weight_filler {
+                          type: "xavier"
+                        }
+                        bias_filler {
+                          type: "constant"
+                          value: 0
+                        }
+                      }
+                      bottom: "QEXMQE"
+                      top: "action"
+                    }
+                        ''')
+        self.assertEqual(test_action, self.action.read_out({}, {"data": 9,
+                                                                "STM": 5}))
         
     def test_read(self):
         dgeann.random.seed("layers")
