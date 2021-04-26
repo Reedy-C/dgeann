@@ -213,46 +213,37 @@ class testLayer(unittest.TestCase):
 ##                            ''')
 ##        self.assertEqual(test_loss, self.loss.read_out())
         
-##    def test_read(self):
-##        dgeann.random.seed("layers")
-##        concat_dict = {}
-##        #a case where neither is read
-##        test_a = self.unread_a.read("temp_file.txt", self.active_list,
-##                                    concat_dict, self.unread_b)
-##        self.assertEqual(test_a, self.active_list, concat_dict, )
-##        #a case where the first is read
-##        test_b = self.low_dom_a.read("temp_file.txt", self.active_list,
-##                                     concat_dict, self.unread_a)
-##        self.assertEqual(test_b, {"cake": 5, "onion": 7, "abcd": 4})
-##        #a case where the second is read
-##        test_c = self.unread_a.read("temp_file.txt", self.active_list,
-##                                    concat_dict, self.low_dom_a)
-##        self.assertEqual(test_c, {"cake": 5, "onion": 7, "abcd": 4})
-##        #a case where they have the same dom
-##        test_d = self.low_dom_a.read("temp_file.txt", self.active_list,
-##                                     concat_dict, self.low_dom_b)
-##        self.assertEqual(test_d, {"cake": 5, "onion": 7, "efgh": 1})
-##        #a case where the first dominates
-##        test_e = self.high_dom.read("temp_file.txt", self.active_list,
-##                                    concat_dict, self.low_dom_a)
-##        self.assertEqual(test_e, {"cake": 5, "onion": 7, "ijkl": 2})
-##        #a case where the second dominates
-##        test_f = self.low_dom_b.read("temp_file.txt", self.active_list,
-##                                     concat_dict, self.high_dom)
-##        self.assertEqual(test_f, {"cake": 5, "onion": 7, "ijkl": 2})
-##        #a case with no other gene (and two dependencies)
-##        test_g = self.multiple_layer.read("temp_file.txt", self.active_list,
-##                                          concat_dict)
-##        self.assertEqual(test_g, {"cake": 5, "onion": 7, "qrst": 3})
-##        #a case with no other gene (and no dependencies)
-##        test_h = self.no_inputs.read("temp_file.txt", self.active_list,
-##                                     concat_dict)
-##        self.assertEqual(test_h, {"cake": 5, "onion": 7, "uvwx": 3})
-##        #a case where the other gene has no dependencies
-##        test_i = self.low_dom_a.read("temp_file.txt", self.active_list,
-##                                     concat_dict, self.no_inputs)
-##        self.assertEqual(test_i, {"cake": 5, "onion": 7, "uvwx": 3})
-##        os.remove("temp_file.txt")
+    def test_read(self):
+        dgeann.random.seed("layers")
+        concat_dict = {}
+        #a case where neither is read
+        test_a = self.unread_a.read(self.active_list, self.unread_b, {}, {})
+        self.assertEqual(test_a, None)
+        #a case where the first is read
+        test_b = self.low_dom_a.read(self.active_list, self.unread_a, {}, {})
+        self.assertEqual(test_b, self.low_dom_a)
+        #a case where the second is read
+        test_c = self.unread_a.read(self.active_list, self.low_dom_a, {}, {})
+        self.assertEqual(test_c, self.low_dom_a)
+        #a case where they have the same dom
+        test_d = self.low_dom_a.read(self.active_list, self.low_dom_b, {}, {})
+        self.assertEqual(test_d, self.low_dom_b)
+        #a case where the first dominates
+        test_e = self.high_dom.read(self.active_list, self.low_dom_a, {}, {})
+        self.assertEqual(test_e, self.high_dom)
+        #a case where the second dominates
+        test_f = self.low_dom_b.read(self.active_list, self.high_dom, {}, {})
+        self.assertEqual(test_f, self.high_dom)
+        #a case with null other gene (and two dependencies)
+        null = dgeann.LayerGene(0, False, False, 0, "null", [], None, None)
+        test_g = self.multiple_layer.read(self.active_list, null, {}, {})
+        self.assertEqual(test_g, self.multiple_layer)
+        #a case with no other gene (and no dependencies)
+        test_h = self.no_inputs.read(self.active_list, null, {}, {})
+        self.assertEqual(test_h, self.no_inputs)
+        #a case where the other gene has no dependencies
+        test_i = self.low_dom_a.read(self.active_list, self.no_inputs, {}, {})
+        self.assertEqual(test_i, self.no_inputs)
         
         
     def test_mutate(self):
