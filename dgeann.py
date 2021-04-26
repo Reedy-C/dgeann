@@ -102,7 +102,7 @@ weight_mut_probs = (0.833, 0.117, 0.05)
 #toggles recording of mutations in child from parents
 record_muts = True
 
-        
+
 class genome(object):
     """Genome defining a neural network.
 
@@ -345,17 +345,12 @@ class genome(object):
                         self.layerchr_a.insert(self.layerchr_a.index(
                                                 self.layerchr_a[n]),
                                                null)
-                        m += 1
-                        n += 1
                     else:
                         self.layerchr_b.insert(self.layerchr_b.index(
                                                 self.layerchr_b[m]),
                                                null)
-                        n += 1
-                        m += 1
-                else:
-                    n += 1
-                    m += 1
+                n += 1
+                m += 1
             self.layerchr_a.reverse()
             self.layerchr_b.reverse()
 
@@ -445,27 +440,18 @@ class genome(object):
         exist, so that the correct weights are adjusted in the final network.
         """
         #probably not the fastest way to do this
-        for weight in self.weightchr_a:
-            for key in concat_dict:
-                if (weight.in_layer in concat_dict[key][0] and
-                    weight.out_layer in concat_dict[key][2]):
-                    #don't adjust the first one
-                    if (concat_dict[key][0].index(weight.in_layer)) != 0:
-                        n = concat_dict[key][1][0]
-                        for lay in concat_dict[key][1][
-                            1:(concat_dict[key][0].index(weight.in_layer))]:
-                            n += lay
-                        weight.alt_in = n + weight.in_node
-        for weight in self.weightchr_b:
-            for key in concat_dict:
-                if (weight.in_layer in concat_dict[key][0] and
-                    weight.out_layer in concat_dict[key][2]):
-                    if (concat_dict[key][0].index(weight.in_layer)) != 0:
-                        n = concat_dict[key][1][0]
-                        for lay in concat_dict[key][1][
-                            1:(concat_dict[key][0].index(weight.in_layer))]:
-                            n += lay
-                        weight.alt_in = n + weight.in_node
+        for ch in [self.weightchr_a, self.weightchr_b]:
+            for weight in ch:
+                for key in concat_dict:
+                    if (weight.in_layer in concat_dict[key][0] and
+                        weight.out_layer in concat_dict[key][2]):
+                        #don't adjust the first one
+                        if (concat_dict[key][0].index(weight.in_layer)) != 0:
+                            n = concat_dict[key][1][0]
+                            for lay in concat_dict[key][1][
+                                1:(concat_dict[key][0].index(weight.in_layer))]:
+                                n += lay
+                            weight.alt_in = n + weight.in_node
 
     def build_weights(self, active_list, net, sub_dict):
         """Change the weights in the created network to those defined
@@ -727,19 +713,19 @@ class genome(object):
         """
         for layer in self.layerchr_a:
             result = layer.mutate()
-            if result is not "":
+            if result != "":
                 self.handle_mutation(result, layer, "a", self.layerchr_a)
         for layer in self.layerchr_b:
             result = layer.mutate()
-            if result is not "":
+            if result != "":
                 self.handle_mutation(result, layer, "b", self.layerchr_b)
         for weight in self.weightchr_a:
             result = weight.mutate()
-            if result is not "":
+            if result != "":
                 self.handle_mutation(result, weight, "a", self.weightchr_a)
         for weight in self.weightchr_b:
             result = weight.mutate()
-            if result is not "":
+            if result != "":
                 self.handle_mutation(result, weight, "b", self.weightchr_b)
 
     #helper function for mutate
