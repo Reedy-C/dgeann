@@ -103,7 +103,7 @@ weight_mut_probs = (0.833, 0.117, 0.05)
 record_muts = True
 
 
-class genome(object):
+class Genome(object):
     """Genome defining a neural network.
 
     A genome is a list of lists of genes referred to as chromosomes.
@@ -152,7 +152,7 @@ class genome(object):
             gen.alt_in = gen.in_node
         for gen in weight_two:
             gen.alt_in = gen.in_node
-        child = genome(layer_one, layer_two, weight_one, weight_two)
+        child = Genome(layer_one, layer_two, weight_one, weight_two)
         #now just do mutations
         child.mutate()
         return child
@@ -197,7 +197,7 @@ class genome(object):
         for x in range(weight_cross, len(self.weightchr_a)):
             self.weightchr_a[x].alt_in = self.weightchr_a[x].in_node
             weight_b.append(self.weightchr_a[x])
-        result = genome(layer_a, layer_b, weight_a, weight_b)
+        result = Genome(layer_a, layer_b, weight_a, weight_b)
         return result
 
     #helper function for crossover
@@ -252,7 +252,7 @@ class genome(object):
     #TODO is it possible to simplify and get rid of active_list
     #   given that I now know that list(t._layer/blob_names) exists?
     def build(self, delete=True):
-        """Return the solver for the PyCaffe network from the genome.
+        """Return the solver for the PyCaffe network from the Genome.
 
         Delete: if true, deletes the generated solver files.
         """
@@ -282,7 +282,7 @@ class genome(object):
         if len(self.weightchr_a) > 0:
             self.build_weights(active_list, solver.net, sub_dict)
         else:
-            self.rand_weight_genes(solver.net, concat_dict)
+            self.rand_WeightGenes(solver.net, concat_dict)
         return solver
 
     #helper function for build
@@ -295,7 +295,7 @@ class genome(object):
         #(if genome is actually haploid)
         else:
             for i in range(len(self.layerchr_a)):
-                self.layerchr_b.append(layer_gene(0, False, False, 0, "null",
+                self.layerchr_b.append(LayerGene(0, False, False, 0, "null",
                                                   [], None, None))
                 i += 1
         sub_dict, active_list, layout = self.structure_network(active_list)
@@ -325,7 +325,7 @@ class genome(object):
                 if self.layerchr_a[n].ident != self.layerchr_b[m].ident:
                 #if not, then insert a new null layer
                 #under the shorter one
-                    null = layer_gene(3, False, False, 0, "null", [],
+                    null = LayerGene(3, False, False, 0, "null", [],
                                       None, None)
                 #compare same layer in shorter with next in longer
                     if len(self.layerchr_a) < len(self.layerchr_b):
@@ -407,14 +407,14 @@ class genome(object):
             #TODO skipping with None for now
             else:
                 if layout[i].ident != 'null':
-                    layout[i] = layer_gene(3, False, False, 0, "null", [],
+                    layout[i] = LayerGene(3, False, False, 0, "null", [],
                                             None, None)
         #clear out orphans
         if self.outs != None:
             for i in range(len(layout)):
                 if (layout[i].ident in orphan_list
                     and layout[i].ident not in self.outs):
-                    layout[i] = layer_gene(3, False, False, 0, "null", [],
+                    layout[i] = LayerGene(3, False, False, 0, "null", [],
                                                 None, None)
         #now delete all null layers in chr a, chr b, and layout
         layout[:] = [x for x in layout if x.ident != "null"]
@@ -464,7 +464,7 @@ class genome(object):
                 if a.out_node == b.out_node:
                     values = a.read(active_list, sub_dict, b)
                     if values is not None:
-                        genome.adjust_weight(net, values, sub_dict)
+                        Genome.adjust_weight(net, values, sub_dict)
                     n += 1
                     m += 1
                     if n > a_lim and m <= b_lim:
@@ -561,7 +561,7 @@ class genome(object):
                 while x <= (len(longer) - 1):
                     values = longer[x].read(active_list, sub_dict)
                     if values is not None:
-                        genome.adjust_weight(net, values, sub_dict)
+                        Genome.adjust_weight(net, values, sub_dict)
                     x += 1
 
     #helper function for build_weights
@@ -598,7 +598,7 @@ class genome(object):
         a = chro[n]
         values = a.read(active_list, sub_dict)
         if values is not None:
-            genome.adjust_weight(net, values, sub_dict)
+            Genome.adjust_weight(net, values, sub_dict)
         n += 1
         if n <= (len(chro) - 1):
             a = chro[n]
@@ -606,7 +606,7 @@ class genome(object):
 
     #helper function for build
     #TODO return?
-    def rand_weight_genes(self, net, concat_dict):
+    def rand_WeightGenes(self, net, concat_dict):
         """Create a network with random weights and create weight genes for
         both chromosomes based on those weights.
 
@@ -630,7 +630,7 @@ class genome(object):
                 else:
                     self.create_rweights(in_layer, d, key, net)
 
-    #helper function for rand_weight_genes
+    #helper function for rand_WeightGenes
     #t is net
     #d is the weight array of the OUTPUT layer
     #TODO more elegant way to do this?
@@ -669,7 +669,7 @@ class genome(object):
             off = self.create_rweights(ins_right, d, out_layer, net, off)
         return off
 
-    #helper function for rand_weight_genes
+    #helper function for rand_WeightGenes
     def create_rweights(self, in_layer, d, out_layer, net, off=0):
         """Create all weight genes in a random network and add them to
         weight chromosomes, and return new offset number.
@@ -686,7 +686,7 @@ class genome(object):
             #j is the output number/node
             for j in range(len(d)):
                 weight = d[j][i+off]
-                w_gene = weight_gene(random.randint(1, 5), True, False,
+                w_gene = WeightGene(random.randint(1, 5), True, False,
                                      def_mut_rate, gene_ident(), weight,
                                      i, j, in_layer, out_layer)
                 self.weightchr_a.append(w_gene)
@@ -810,7 +810,7 @@ class genome(object):
             for i in range(in_dict[layer]):
                 for j in range(new_gene.nodes):
                     weight = random.gauss(0, var)
-                    w = weight_gene(random.randint(1,5),
+                    w = WeightGene(random.randint(1,5),
                                     True, False, def_mut_rate, gene_ident(),
                                     weight, i, j, layer, new_gene.ident)
                     new_weights.append(w)
@@ -820,7 +820,7 @@ class genome(object):
         for i in range(new_gene.nodes):
             for j in range(out_gene.nodes):
                 weight = random.gauss(0, var)
-                w = weight_gene(random.randint(1,5),
+                w = WeightGene(random.randint(1,5),
                                 True, False, def_mut_rate,
                                 gene_ident(), weight, i, j,
                                 new_gene.ident, out_gene.ident)
@@ -878,7 +878,7 @@ class genome(object):
                     for i in range(new):
                         for j in range(out_dict[g.out_layer].nodes):
                             w = random.gauss(0, var)
-                            weight = weight_gene(random.randint(1, 5), True,
+                            weight = WeightGene(random.randint(1, 5), True,
                                                  False, def_mut_rate,
                                                  gene_ident(),
                                                  w, (i + g.in_node + 1),
@@ -900,7 +900,7 @@ class genome(object):
                         var = math.sqrt(var)
                         for i in range(new):
                             w = random.gauss(0, var)
-                            weight = weight_gene(random.randint(1, 5), True,
+                            weight = WeightGene(random.randint(1, 5), True,
                                                  False, def_mut_rate,
                                                  gene_ident(), w,
                                                  g.in_node, (i + g.out_node + 1),
@@ -943,7 +943,7 @@ def network_ident():
     ident = "T" + ident
     return ident
              
-class gene(object):
+class Gene(object):
     """Unit of information that populates a genome chromosome.
     
     dom: dominance rating (int, 1~5)
@@ -987,7 +987,7 @@ def gene_ident():
         ident = ident + letters[(random.randint(0, 25))]
     return ident
 
-class layer_gene(gene):
+class LayerGene(Gene):
     """Defines a Caffe network layer.
 
     inputs: a list of strings that are inputs to this layer.
@@ -997,7 +997,7 @@ class layer_gene(gene):
     
     def __init__(self, dom, can_mut, can_dup, mut_rate, ident, inputs, nodes,
                  layer_type):
-        super(layer_gene, self).__init__(dom, can_mut, can_dup, mut_rate, ident)
+        super(LayerGene, self).__init__(dom, can_mut, can_dup, mut_rate, ident)
         self.inputs = inputs
         self.nodes = nodes
         self.layer_type = layer_type
@@ -1160,7 +1160,7 @@ class layer_gene(gene):
             result = "Add input,"
         return result
     
-class weight_gene(gene):
+class WeightGene(Gene):
     """Defines a single weight in the Caffe network.
 
     weight: weight value that this gene codes for (float)
@@ -1170,7 +1170,7 @@ class weight_gene(gene):
     
     def __init__(self, dom, can_mut, can_dup, mut_rate, ident, weight, in_node,
                  out_node, in_layer, out_layer):
-        super(weight_gene, self).__init__(dom, can_mut, can_dup,
+        super(WeightGene, self).__init__(dom, can_mut, can_dup,
                                           mut_rate, ident)
         self.weight = weight
         self.in_node = in_node
@@ -1317,7 +1317,7 @@ class weight_gene(gene):
         return result
 
 
-class haploid_genome(genome):
+class HaploidGenome(Genome):
     """Haploid genome defining a neural network.
 
     The second layer/weight chromosomes are left blank.
@@ -1343,6 +1343,6 @@ class haploid_genome(genome):
         weights = random.sample([result.weightchr_a, result.weightchr_b], 1)
         layers = layers[0]
         weights = weights[0]
-        child = haploid_genome(layers, weights)
+        child = HaploidGenome(layers, weights)
         child.mutate()
         return child
