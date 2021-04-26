@@ -257,7 +257,7 @@ class genome(object):
         Delete: if true, deletes the generated solver files.
         """
         #first, generate a new ID for the network
-        self.ident = genome.network_ident()
+        self.ident = network_ident()
         if not os.path.exists('Gen files'):
             os.makedirs('Gen files')
         ident_file = os.path.join('Gen files', self.ident + '.gen')
@@ -284,19 +284,6 @@ class genome(object):
         else:
             self.rand_weight_genes(solver.net, concat_dict)
         return solver
-
-    @staticmethod
-    def network_ident():
-        """Return a string that becomes a network's unique ID.
-        """
-        ident = ""
-        while len(ident) != 11:
-            if len(ident) == 3 or len(ident) == 7:
-                ident = ident + "-"
-            else:
-                ident = ident + str(random.randint(0, 9))
-        ident = "T" + ident
-        return ident
 
     #helper function for build
     def build_layers(self, active_list, ident_file, concat_dict):
@@ -700,7 +687,7 @@ class genome(object):
             for j in range(len(d)):
                 weight = d[j][i+off]
                 w_gene = weight_gene(random.randint(1, 5), True, False,
-                                     def_mut_rate, genome.gene_ident(), weight,
+                                     def_mut_rate, gene_ident(), weight,
                                      i, j, in_layer, out_layer)
                 self.weightchr_a.append(w_gene)
                 w_gene.dom = random.randint(1, 5)
@@ -769,24 +756,13 @@ class genome(object):
                 self.add_nodes(gene, chro, int(result[7]), self.weightchr_b,
                                n_in)
                 gene.nodes += int(result[7])
-                
-    @staticmethod
-    def gene_ident():
-        """Generate a six-character alphabetical string to use as
-        a gene identifier.
-        """
-        letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        ident = ""
-        while len(ident) < 6:
-            ident = ident + letters[(random.randint(0, 25))]
-        return ident
 
     #helper function for handle_mutation
     def handle_duplication(self, gene, chro):
         """Handle duplication mutations.
         """
         #first we make a new ident
-        new_id = genome.gene_ident()
+        new_id = gene_ident()
         #then copy the gene
         new_gene = copy.deepcopy(gene)
         new_gene.ident = new_id
@@ -835,8 +811,7 @@ class genome(object):
                 for j in range(new_gene.nodes):
                     weight = random.gauss(0, var)
                     w = weight_gene(random.randint(1,5),
-                                    True, False, def_mut_rate,
-                                    genome.gene_ident(),
+                                    True, False, def_mut_rate, gene_ident(),
                                     weight, i, j, layer, new_gene.ident)
                     new_weights.append(w)
         #then from new gene -> the gene that now takes it as input
@@ -847,8 +822,8 @@ class genome(object):
                 weight = random.gauss(0, var)
                 w = weight_gene(random.randint(1,5),
                                 True, False, def_mut_rate,
-                                genome.gene_ident(),
-                                weight, i, j, new_gene.ident, out_gene.ident)
+                                gene_ident(), weight, i, j,
+                                new_gene.ident, out_gene.ident)
                 new_weights.append(w)
         #and lastly stick it all in the weight chromosome
         ###where?
@@ -905,7 +880,7 @@ class genome(object):
                             w = random.gauss(0, var)
                             weight = weight_gene(random.randint(1, 5), True,
                                                  False, def_mut_rate,
-                                                 genome.gene_ident(),
+                                                 gene_ident(),
                                                  w, (i + g.in_node + 1),
                                                  j, gene.ident,
                                                  g.out_layer)
@@ -927,7 +902,7 @@ class genome(object):
                             w = random.gauss(0, var)
                             weight = weight_gene(random.randint(1, 5), True,
                                                  False, def_mut_rate,
-                                                 genome.gene_ident(), w,
+                                                 gene_ident(), w,
                                                  g.in_node, (i + g.out_node + 1),
                                                  g.in_layer, gene.ident)
                             weight_chr.insert(ind, weight)
@@ -955,7 +930,18 @@ class genome(object):
                 if c in g.inputs:
                     out_list.append(g)
         return out_list
-   
+
+def network_ident():
+    """Return a string that becomes a network's unique ID.
+    """
+    ident = ""
+    while len(ident) != 11:
+        if len(ident) == 3 or len(ident) == 7:
+            ident = ident + "-"
+        else:
+            ident = ident + str(random.randint(0, 9))
+    ident = "T" + ident
+    return ident
              
 class gene(object):
     """Unit of information that populates a genome chromosome.
@@ -990,7 +976,16 @@ class gene(object):
         read_file: .gen file that is printed to, then read to make net.
         """
         pass
-
+    
+def gene_ident():
+    """Generate a six-character alphabetical string to use as
+    a gene identifier.
+    """
+    letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    ident = ""
+    while len(ident) < 6:
+        ident = ident + letters[(random.randint(0, 25))]
+    return ident
 
 class layer_gene(gene):
     """Defines a Caffe network layer.
@@ -1089,7 +1084,7 @@ class layer_gene(gene):
                     in_con == key
                 #else, need to make a new concat layer, and hence new entry
             if in_con == None:
-                k = genome.gene_ident()
+                k = gene_ident()
                 in_con = k
                 in_nodes = []
                 for lay in self.inputs:
