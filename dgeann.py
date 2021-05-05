@@ -277,7 +277,7 @@ class Genome(object):
         if delete == True:
             os.remove(ident_file)
         #deal with concats and weights
-        self.concat_adjust(active_list, concat_dict)
+        self.concat_adjust(concat_dict)
         #now change the weights to those specified in genetics
         if len(self.weightchr_a) > 0:
             self.build_weights(active_list, solver.net, sub_dict)
@@ -422,7 +422,7 @@ class Genome(object):
         self.layerchr_b[:] = [x for x in self.layerchr_b if x.ident != "null"]
         return sub_dict, active_list, layout
 
-    def concat_adjust(self, active_list, concat_dict):
+    def concat_adjust(self, concat_dict):
         """Adjust offsets for weight gene input nodes when concat layers
         exist, so that the correct weights are adjusted in the final network.
         """
@@ -464,7 +464,7 @@ class Genome(object):
                 if a.out_node == b.out_node:
                     values = a.read(active_list, sub_dict, b)
                     if values is not None:
-                        Genome.adjust_weight(net, values, sub_dict)
+                        Genome.adjust_weight(net, values)
                     n += 1
                     m += 1
                     if n > a_lim and m <= b_lim:
@@ -561,12 +561,12 @@ class Genome(object):
                 while x <= (len(longer) - 1):
                     values = longer[x].read(active_list, sub_dict)
                     if values is not None:
-                        Genome.adjust_weight(net, values, sub_dict)
+                        Genome.adjust_weight(net, values)
                     x += 1
 
     #helper function for build_weights
     @staticmethod
-    def adjust_weight(net, values, sub_dict):
+    def adjust_weight(net, values):
         """Change an individual weight in the network to that specified
         by a particular pair of weight genes.
         """
@@ -598,7 +598,7 @@ class Genome(object):
         a = chro[n]
         values = a.read(active_list, sub_dict)
         if values is not None:
-            Genome.adjust_weight(net, values, sub_dict)
+            Genome.adjust_weight(net, values)
         n += 1
         if n <= (len(chro) - 1):
             a = chro[n]
@@ -870,8 +870,8 @@ class Genome(object):
                 new = (gene.nodes + new_nodes - 1) - g.in_node
                 if new > 0:
                     ind = weight_chr.index(g) + 1
-                    out_n, out_d = self.find_n_inputs(out_dict[g.out_layer],
-                                                      chro)
+                    out_n = self.find_n_inputs(out_dict[g.out_layer],
+                                                      chro)[0]
                     var = out_n/1
                     #we give this function the std, not var
                     var = math.sqrt(var)
@@ -976,6 +976,7 @@ class Gene(object):
         read_file: .gen file that is printed to, then read to make net.
         """
         pass
+        
     
 def gene_ident():
     """Generate a six-character alphabetical string to use as
@@ -1025,7 +1026,7 @@ class LayerGene(Gene):
                     ins = copy.copy(self.inputs)
                     for lay in ins:
                         if lay in del_list:
-                           ins.remove(lay)
+                            ins.remove(lay)
                         else:
                             if lay in sub_dict.keys():
                                 lay = sub_dict[lay]
@@ -1038,7 +1039,7 @@ class LayerGene(Gene):
                     ins = copy.copy(other_gene.inputs)
                     for lay in ins:
                         if lay in del_list:
-                           ins.remove(lay)
+                            ins.remove(lay)
                         else:
                             if lay in sub_dict.keys():
                                 lay = sub_dict[lay]
@@ -1082,6 +1083,7 @@ class LayerGene(Gene):
                 #if so, then add this layer as an output
                     concat_dict[key][2].append(self.ident)
                     in_con == key
+                    break
                 #else, need to make a new concat layer, and hence new entry
             if in_con == None:
                 k = gene_ident()
