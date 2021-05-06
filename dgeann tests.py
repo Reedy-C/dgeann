@@ -916,33 +916,24 @@ class testRandGenes(unittest.TestCase):
 
     def setUp(self):
         dgeann.random.seed("vigor")
+
+    def test_create_rweights(self):
         lay = [dgeann.LayerGene(1, False, False, 0, "a", [], 2, "input"),
                dgeann.LayerGene(1, False, False, 0, "h", ["a"], 2, "IP")]
         #simple case
-        self.simp_genome = dgeann.Genome(lay, lay, [], [])
-        #concats case
-        layers = [dgeann.LayerGene(1, False, False, 0, "i", [], 1, "input"),
-                  dgeann.LayerGene(1, False, False, 0, "a", ["i"], 2, "IP"),
-                  dgeann.LayerGene(1, False, False, 0, "b", ["i"], 2, "IP"),
-                  dgeann.LayerGene(1, False, False, 0, "c", ["i"], 2, "IP"),
-                  dgeann.LayerGene(1, False, False, 0, "d", ["i"], 2, "IP"),
-                  dgeann.LayerGene(1, False, False, 0, "h",
-                                   ["a", "b", "c", "d"], 2, "IP")]
-        self.concats_genome = dgeann.Genome(layers, layers, [], [])
-
-    def test_rand2genes(self):
-        net = self.simp_genome.build().net
-        self.simp_genome.net = net
+        simp_genome = dgeann.Genome(lay, lay, [], [])
+        net = simp_genome.build().net
         key = "h"
         d = net.params[key][0].data
-        self.simp_genome.weightchr_a = []
-        self.simp_genome.weightchr_b = []
-        self.simp_genome.rand_weight_genes(net, {})
-        self.assertEqual(len(self.simp_genome.weightchr_a), 4)
-        self.assertEqual(len(self.simp_genome.weightchr_b), 4)
+        simp_genome.weightchr_a = []
+        simp_genome.weightchr_b = []
+        off = simp_genome.create_rweights("a", d, "h", net)
+        self.assertEqual(off, 2)
+        self.assertEqual(len(simp_genome.weightchr_a), 4)
+        self.assertEqual(len(simp_genome.weightchr_b), 4)
         i = 0
         j = 0
-        for gen in self.simp_genome.weightchr_a:
+        for gen in simp_genome.weightchr_a:
             self.assertEqual(gen.in_node, j)
             self.assertEqual(gen.out_node, i)
             a = d[i][j]
@@ -951,15 +942,26 @@ class testRandGenes(unittest.TestCase):
             if i == 2:
                 i = 0
                 j += 1
-        #concat case
+
+    def test_concat_rweights(self):
+        #concats case
+        layers = [dgeann.LayerGene(1, False, False, 0, "i", [], 1, "input"),
+          dgeann.LayerGene(1, False, False, 0, "a", ["i"], 2, "IP"),
+          dgeann.LayerGene(1, False, False, 0, "b", ["i"], 2, "IP"),
+          dgeann.LayerGene(1, False, False, 0, "c", ["i"], 2, "IP"),
+          dgeann.LayerGene(1, False, False, 0, "d", ["i"], 2, "IP"),
+          dgeann.LayerGene(1, False, False, 0, "h",
+                           ["a", "b", "c", "d"], 2, "IP")]
+        concats_genome = dgeann.Genome(layers, layers, [], [])
+        key = "h"
         concat_dict = {"ZPKRMC": [["a", "b", "c", "d"], [2, 2, 2, 2], ["h"]]}
-        net = self.concats_genome.build().net
+        net =concats_genome.build().net
         d = net.params[key][0].data
-        self.assertEqual(len(self.concats_genome.weightchr_a), 24)
+        self.assertEqual(len(concats_genome.weightchr_a), 24)
         i = 0
         j = 0
         off_dict = {"a": 0, "b": 2, "c": 4, "d": 6}
-        for gen in self.concats_genome.weightchr_a[8:]:
+        for gen in concats_genome.weightchr_a[8:]:
             self.assertEqual(gen.in_node, j)
             self.assertEqual(gen.out_node, i)
             a = d[i][j+off_dict[gen.in_layer]]
@@ -970,53 +972,6 @@ class testRandGenes(unittest.TestCase):
                 j += 1
             if j == 2:
                 j = 0
-
-##    def test_create_rweights(self):
-##        net = self.simp_genome.build().net
-##        key = "h"
-##        d = net.params[key][0].data
-##        self.simp_genome.weightchr_a = []
-##        self.simp_genome.weightchr_b = []
-##        off = self.simp_genome.create_rweights("a", d, "h", net)
-##        self.assertEqual(off, 2)
-##        self.assertEqual(len(self.simp_genome.weightchr_a), 4)
-##        self.assertEqual(len(self.simp_genome.weightchr_b), 4)
-##        i = 0
-##        j = 0
-##        for gen in self.simp_genome.weightchr_a:
-##            self.assertEqual(gen.in_node, j)
-##            self.assertEqual(gen.out_node, i)
-##            a = d[i][j]
-##            self.assertAlmostEqual(gen.weight, a)
-##            i += 1
-##            if i == 2:
-##                i = 0
-##                j += 1
-
-##    def test_concat_rweights(self):
-##        net = self.concats_genome.build().net
-##        key = "h"
-##        d = net.params[key][0].data
-##        concat_dict = {"b": ["e", 2, "h"], "d": ["f", 2, "h"],
-##                       "f": ["g", None, "h"]}
-##        self.concats_genome.weightchr_a = []
-##        self.concats_genome.weightchr_b = []
-##        self.concats_genome.concat_rweights(net, "g", d, key, concat_dict)
-##        self.assertEqual(len(self.concats_genome.weightchr_a), 16)
-##        i = 0
-##        j = 0
-##        off_dict = {"a": 0, "b": 2, "c": 4, "d": 6}
-##        for gen in self.concats_genome.weightchr_a:
-##            self.assertEqual(gen.in_node, j)
-##            self.assertEqual(gen.out_node, i)
-##            a = d[i][j+off_dict[gen.in_layer]]
-##            self.assertAlmostEqual(gen.weight, a)
-##            i += 1
-##            if i == 2:
-##                i = 0
-##                j += 1
-##            if j == 2:
-##                j = 0
 
 #tests the genome mutation functions
 class testMutation(unittest.TestCase):
@@ -1108,34 +1063,34 @@ class testMutation(unittest.TestCase):
                     n = 0
                     m += 1
 
-##    def test_handle_duplication(self):
-##        test_input = dgeann.LayerGene(4, False, False, 0, "d", [], 1, "data")
-##        test_layer_b = dgeann.LayerGene(4, True, True, .01, "INa",
-##                                        ["d"], 5, "IP")
-##        test_genome = dgeann.Genome([test_input, test_layer_b], [],
-##                                      [], [])
-##        test_genome.handle_duplication(test_layer_b, test_genome.layerchr_a)
-##        self.assertEqual(len(test_genome.layerchr_a), 4)
-##        self.assertNotEqual(test_genome.layerchr_a[1].ident, "INa")
-##        self.assertEqual(len(test_genome.weightchr_a), 30)
-##        self.assertEqual(len(test_genome.weightchr_b), 30)
-##        i = 0
-##        j = 0
-##        k = 0
-##        for gene in test_genome.weightchr_a:
-##            if k == 0:
-##                self.assertEqual(gene.in_layer, "d")
-##            else:
-##                self.assertEqual(gene.out_layer, "INa")
-##            self.assertEqual(gene.out_node, i)
-##            self.assertEqual(gene.in_node, j)
-##            i += 1
-##            if i > 4:
-##                i = 0
-##                if k == 0:
-##                    k = 1
-##                else:
-##                    j += 1
+    def test_handle_duplication(self):
+        test_input = dgeann.LayerGene(4, False, False, 0, "d", [], 1, "data")
+        test_layer_b = dgeann.LayerGene(4, True, True, .01, "INa",
+                                        ["d"], 5, "IP")
+        test_genome = dgeann.Genome([test_input, test_layer_b], [],
+                                      [], [])
+        test_genome.handle_duplication(test_layer_b, test_genome.layerchr_a)
+        self.assertEqual(len(test_genome.layerchr_a), 3)
+        self.assertNotEqual(test_genome.layerchr_a[1].ident, "INa")
+        self.assertEqual(len(test_genome.weightchr_a), 30)
+        self.assertEqual(len(test_genome.weightchr_b), 30)
+        i = 0
+        j = 0
+        k = 0
+        for gene in test_genome.weightchr_a:
+            if k == 0:
+                self.assertEqual(gene.in_layer, "d")
+            else:
+                self.assertEqual(gene.out_layer, "INa")
+            self.assertEqual(gene.out_node, i)
+            self.assertEqual(gene.in_node, j)
+            i += 1
+            if i > 4:
+                i = 0
+                if k == 0:
+                    k = 1
+                else:
+                    j += 1
 
     def test_find_outputs(self):
         #simple case
