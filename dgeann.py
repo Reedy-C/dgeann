@@ -282,7 +282,7 @@ class Genome(object):
         if len(self.weightchr_a) > 0:
             self.build_weights(active_list, solver.net, sub_dict)
         else:
-            self.rand_WeightGenes(solver.net, concat_dict)
+            self.rand_weight_genes(solver.net, concat_dict)
         return solver
 
     #helper function for build
@@ -605,8 +605,7 @@ class Genome(object):
         return n, a
 
     #helper function for build
-    #TODO return?
-    def rand_WeightGenes(self, net, concat_dict):
+    def rand_weight_genes(self, net, concat_dict):
         """Create a network with random weights and create weight genes for
         both chromosomes based on those weights.
 
@@ -621,7 +620,8 @@ class Genome(object):
                 #now see if this is in concat_dict?
                 conc = False
                 for con in concat_dict:
-                    if in_layer in concat_dict[con][0]:
+                    #if in_layer in concat_dict[con][0]:
+                    if in_layer in concat_dict.keys():
                         #then input is from a concat layer
                         conc = True
                         break
@@ -630,46 +630,22 @@ class Genome(object):
                 else:
                     self.create_rweights(in_layer, d, key, net)
 
-    #helper function for rand_WeightGenes
-    #t is net
+    #helper function for rand_weight_genes
     #d is the weight array of the OUTPUT layer
-    #TODO more elegant way to do this?
     def concat_rweights(self, net, in_layer, d, out_layer, concat_dict, off=0):
         """Return weight genes with offsets already adjusted for randomized
         network.
         """
         #current layer is a concat layer; now we need to check *its* inputs
-        ins_left = list(net._blob_names)[
-                    list(net._bottom_ids(
-                        list(net._layer_names).index(in_layer)))[0]]
-        ins_right = list(net._blob_names)[
-                    list(net._bottom_ids(
-                        list(net._layer_names).index(in_layer)))[1]]
-        #check if left is a concat
-        left_concat = False
-        right_concat = False
-        for lay in concat_dict:
-            if ins_left in concat_dict[lay][0]:
-                left_concat = True
-            if ins_right in concat_dict[lay][0]:
-                right_concat = True
-            if left_concat == True and right_concat == True:
-                break
-        #if it is, then repeat
-        if left_concat == True:
-            off = self.concat_rweights(net, ins_left, d, out_layer,
-                                       concat_dict, off)
-        #else, create genes and return offset
-        else:
-            off = self.create_rweights(ins_left, d, out_layer, net, off)
-        if right_concat == True:
-            off = self.concat_rweights(net, ins_right, d, out_layer,
-                                       concat_dict, off)
-        else:
-            off = self.create_rweights(ins_right, d, out_layer, net, off)
+        #for i in  [list of input layer indexes]
+        for i in (list(net._bottom_ids(list(net._layer_names).index(
+            in_layer)))):
+            ins = list(net._blob_names)[i]
+            #TODO can concats still end up stacked? assuming not for now
+            off = self.create_rweights(ins, d, out_layer, net, off)
         return off
 
-    #helper function for rand_WeightGenes
+    #helper function for rand_weight_genes
     def create_rweights(self, in_layer, d, out_layer, net, off=0):
         """Create all weight genes in a random network and add them to
         weight chromosomes, and return new offset number.
