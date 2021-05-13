@@ -1112,246 +1112,240 @@ class testMutation(unittest.TestCase):
         out = test_genome2.find_outputs(test_gene, test_genome2.layerchr_a)
         self.assertEqual(out, [out1, out2, out3])
 
-##    def test_add_nodes(self):
-##        test_in = dgeann.LayerGene(5, False, False, 0, "d", [], 1, "data")
-##        test_gene = dgeann.LayerGene(5, True, True, .01, "tester", ["d"], 5, "IP")
-##        test_out = dgeann.LayerGene(5, False, False, 0, "o", ["tester"], 3, "IP")
-##        weights = []
-##        for i in range(5):
-##            w = dgeann.WeightGene(5, True, False, .01, str(i), 3, 0, i, "d",
-##                                     "tester")
-##            weights.append(w)
-##        for i in range(5):
-##            for j in range (3):
-##                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
-##                                         i, j, "tester", "o")
-##                weights.append(w)
-##        test_genome = dgeann.Genome([test_in, test_gene, test_out], [],
-##                                      weights, [])
-##        
-##        n_in, d = test_genome.find_n_inputs(test_gene, test_genome.layerchr_a)
-##        test_genome.add_nodes(test_gene, test_genome.layerchr_a, 2,
-##                              test_genome.weightchr_a, n_in, d)
-##        #add_nodes itself no longer does this
-##        #self.assertEqual(test_gene.nodes, 7)
-##        test_gene.nodes += 2
-##        self.assertEqual(len(test_genome.weightchr_a), 28)
-##        self.assertEqual(len(test_genome.weightchr_b), 0)
-##        #test that inputs/outputs are right
-##        n = 0
-##        for g in test_genome.weightchr_a[:6]:
-##            self.assertEqual(g.out_node, n)
-##            n += 1
-##        n = 0
-##        m = 0
-##        for g in test_genome.weightchr_a[7:]:
-##            self.assertEqual(g.in_node, n)
-##            self.assertEqual(g.out_node, m)
-##            m += 1
-##            if m > 2:
-##                m = 0
-##                n += 1
-##        #more complicated version: 3 outputs on 2 concats, weights on both chrs
-##        conc1 = dgeann.LayerGene(5, False, False, 0, "con1", ["tester"],
-##                                    None, "concat")
-##        conc2 = dgeann.LayerGene(5, False, False, 0, "con2", ["tester", "d"],
-##                                    None, "concat")
-##        out1 = dgeann.LayerGene(5, True, True, .017, "out1", ["con1"], 5, "IP")
-##        out2 = dgeann.LayerGene(5, True, True, .017, "out2", ["con2"], 3, "IP")
-##        out3 = dgeann.LayerGene(5, True, True, .017, "out3", ["con2"], 6, "IP")
-##        test_gene.nodes = 3
-##        weights = []
-##        compare_weights = []
-##        for i in range(4):
-##            w = dgeann.WeightGene(5, True, False, .01, str(i), 3, 0, i, "d",
-##                                     "tester")
-##            if i < 3:
-##                weights.append(w)
-##            compare_weights.append(w)
-##        for i in range(4):
-##            for j in range(5):
-##                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
-##                                         i, j, "tester", "out1")
-##                if i < 3:
-##                    weights.append(w)
-##                compare_weights.append(w)
-##        for i in range(4):
-##            for j in range (3):
-##                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
-##                                         i, j, "tester", "out2")
-##                if i < 3:
-##                    weights.append(w)
-##                compare_weights.append(w)
-##        for i in range(4):
-##            for j in range (6):
-##                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
-##                                         i, j, "tester", "out3")
-##                if i < 3:
-##                    weights.append(w)
-##                compare_weights.append(w)
-##        test_genome2 = dgeann.Genome([test_in, test_gene, conc1, conc2, out1,
-##                                        out2, out3], [], weights, weights)
-##        n_in, d = test_genome.find_n_inputs(test_gene, test_genome.layerchr_a)
-##        test_genome2.add_nodes(test_gene, test_genome2.layerchr_a, 1,
-##                               test_genome2.weightchr_a, n_in, d)
-##        test_genome2.add_nodes(test_gene, test_genome2.layerchr_b, 1,
-##                               test_genome2.weightchr_b, n_in, d)
-##        test_gene.nodes += 1     
-##        #45 original + 1 + 5 + 3 + 6 = 60
-##        self.assertEqual(len(test_genome2.weightchr_a), 60)
-##        self.assertEqual(len(test_genome2.weightchr_b), 60)
-##        for i in range(len(compare_weights)):
-##            self.assertEqual(compare_weights[i].in_node,
-##                             test_genome2.weightchr_a[i].in_node)
-##            self.assertEqual(compare_weights[i].in_node,
-##                             test_genome2.weightchr_b[i].in_node)
-##            self.assertEqual(compare_weights[i].out_node,
-##                             test_genome2.weightchr_a[i].out_node)
-##            self.assertEqual(compare_weights[i].out_node,
-##                             test_genome2.weightchr_b[i].out_node)
-##        #now a case where the layer shrank in the past, then re-expands
-##        test_gene.nodes -= 2
-##        n_in, d = test_genome.find_n_inputs(test_gene, test_genome.layerchr_a)
-##        test_genome2.add_nodes(test_gene, test_genome2.layerchr_a, 2,
-##                               test_genome2.weightchr_a, n_in, d)
-##        test_genome2.add_nodes(test_gene, test_genome2.layerchr_b, 2,
-##                               test_genome2.weightchr_b, n_in, d)
-##        test_gene.nodes += 2
-##        self.assertEqual(len(test_genome2.weightchr_a), 60)
-##        self.assertEqual(len(test_genome2.weightchr_b), 60)
-##        for i in range(len(compare_weights)):
-##            self.assertEqual(compare_weights[i].in_node,
-##                             test_genome2.weightchr_a[i].in_node)
-##            self.assertEqual(compare_weights[i].in_node,
-##                             test_genome2.weightchr_b[i].in_node)
-##            self.assertEqual(compare_weights[i].out_node,
-##                             test_genome2.weightchr_a[i].out_node)
-##            self.assertEqual(compare_weights[i].out_node,
-##                             test_genome2.weightchr_b[i].out_node)
-##        #and lastly a case where the layer shrank, but expanded to become
-##        #larger than it originally was
-##        test_gene.nodes -= 2
-##        n_in, d = test_genome.find_n_inputs(test_gene, test_genome.layerchr_a)
-##        test_genome2.add_nodes(test_gene, test_genome2.layerchr_a, 3,
-##                               test_genome2.weightchr_a, n_in, d)
-##        test_genome2.add_nodes(test_gene, test_genome2.layerchr_b, 3,
-##                               test_genome2.weightchr_b, n_in, d)
-##        test_gene.nodes +=3
-##        self.assertEqual(len(test_genome2.weightchr_a), 75)
-##        self.assertEqual(len(test_genome2.weightchr_b), 75)
-##        compare_weights = []
-##        for i in range(5):
-##            w = dgeann.WeightGene(5, True, False, .01, str(i), 3, 0, i, "d",
-##                                     "tester")
-##            compare_weights.append(w)
-##        for i in range(5):
-##            for j in range(5):
-##                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
-##                                         i, j, "tester", "out1")
-##                compare_weights.append(w)
-##        for i in range(5):
-##            for j in range (3):
-##                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
-##                                         i, j, "tester", "out2")
-##                compare_weights.append(w)
-##        for i in range(5):
-##            for j in range (6):
-##                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
-##                                         i, j, "tester", "out3")
-##                compare_weights.append(w)
-##        for i in range(len(compare_weights)):
-##            self.assertEqual(compare_weights[i].in_node,
-##                             test_genome2.weightchr_a[i].in_node)
-##            self.assertEqual(compare_weights[i].in_node,
-##                             test_genome2.weightchr_b[i].in_node)
-##            self.assertEqual(compare_weights[i].out_node,
-##                             test_genome2.weightchr_a[i].out_node)
-##            self.assertEqual(compare_weights[i].out_node,
-##                             test_genome2.weightchr_b[i].out_node)    
+    def test_add_nodes(self):
+        test_in = dgeann.LayerGene(5, False, False, 0, "d", [], 1, "data")
+        test_gene = dgeann.LayerGene(5, True, True, .01, "tester", ["d"], 5, "IP")
+        test_out = dgeann.LayerGene(5, False, False, 0, "o", ["tester"], 3, "IP")
+        weights = []
+        for i in range(5):
+            w = dgeann.WeightGene(5, True, False, .01, str(i), 3, 0, i, "d",
+                                     "tester")
+            weights.append(w)
+        for i in range(5):
+            for j in range (3):
+                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
+                                         i, j, "tester", "o")
+                weights.append(w)
+        test_genome = dgeann.Genome([test_in, test_gene, test_out], [],
+                                      weights, [])
         
-##    def test_handle_mutation(self):
-##        test_weight_a = dgeann.WeightGene(5, True, False, 0, "au00",
-##                                      3.00, 0, 0, "INa", "IPu")
-##        test_weight_b = dgeann.WeightGene(4, True, False, 1.0, "au00",
-##                                      3.00, 0, 0, "INa", "IPu")
-##        test_layer_a = dgeann.LayerGene(5, True, False, 0, "INa",
-##                                        [], 5, "input")
-##        test_layer_b = dgeann.LayerGene(4, True, True, .01, "INa",
-##                                        [], 5, "IP")
-##        test_genome = dgeann.Genome([test_layer_a], [test_layer_b],
-##                                      [test_weight_a], [test_weight_b])
-##        test_genome.handle_mutation("Dom, 1", test_weight_a)
-##        self.assertEqual(test_weight_a.dom, 5)
-##        test_genome.handle_mutation("Dom, -1", test_weight_a)
-##        self.assertEqual(test_weight_a.dom, 4)
-##        test_genome.handle_mutation("Dom, 1", test_weight_b)
-##        self.assertEqual(test_weight_b.dom, 5)
-##        test_genome.handle_mutation("Weight, 3.0", test_weight_a)
-##        self.assertEqual(test_weight_a.weight, 6.00)
-##        test_genome.handle_mutation("Weight, -3.0", test_weight_b)
-##        self.assertEqual(test_weight_b.weight, 0.00)
-##        test_genome.handle_mutation("Rate, -1", test_weight_a)
-##        self.assertEqual(test_weight_a.mut_rate, 0)
-##        test_genome.handle_mutation("Rate, 1", test_weight_a)
-##        self.assertEqual(test_weight_a.mut_rate, 1)
-##        test_genome.handle_mutation("Rate, 1", test_weight_b)
-##        self.assertEqual(test_weight_b.mut_rate, 1.0)
-##        test_genome.handle_mutation("Rate, -1", test_weight_b)
-##        self.assertEqual(test_weight_b.mut_rate, 0)
-##        #TODO not all layer mutations are going to be implemented yet
-##        #but these ones are
-##        test_genome.handle_mutation("Rate, -1", test_layer_a)
-##        self.assertEqual(test_layer_a.mut_rate, 0)
-##        test_genome.handle_mutation("Rate, 1", test_layer_a)
-##        self.assertEqual(test_layer_a.mut_rate, 1)
-##        test_genome.handle_mutation("Rate, -.001", test_layer_b)
-##        self.assertAlmostEqual(test_layer_b.mut_rate, .009)
-##        test_genome.handle_mutation("Dom, 1", test_layer_a)
-##        self.assertEqual(test_layer_a.dom, 5)
-##        test_genome.handle_mutation("Dom, -1", test_layer_a)
-##        self.assertEqual(test_layer_a.dom, 4)
-##        test_genome.handle_mutation("Dom, 1", test_layer_b)
-##        self.assertEqual(test_layer_b.dom, 5)
-##        #test duplication
-##        test_in = dgeann.LayerGene(5, False, False, 0, "d", [], 1, "data")
-##        test_dupl = dgeann.LayerGene(5, True, True, .017, "TEST", ["d"], 5, "IP")
-##        test_dup = dgeann.Genome([], [test_in, test_dupl], [], [])
-##        test_dup.handle_mutation("Duplicate,", test_dup.layerchr_b[1],
-##                                 test_dup.layerchr_b)
-##        self.assertEqual(len(test_dup.layerchr_b), 4)
-##        self.assertEqual(len(test_dup.layerchr_b[1].inputs), 1)
-##        self.assertEqual(len(test_dup.layerchr_b[3].inputs), 1)
-##        self.assertEqual(len(test_dup.weightchr_b), 30)
-##        self.assertEqual(len(test_dup.weightchr_a), 30)
-##        #test change in node #
-##        #first losing nodes
-##        test_dup.handle_mutation("Nodes, -3", test_dup.layerchr_b[1],
-##                                 test_dup.layerchr_b)
-##        self.assertEqual(len(test_dup.weightchr_b), 30)
-##        self.assertEqual(test_dup.layerchr_b[1].nodes, 2)
-##        #now adding nodes to one that used to have them and don't need more
-##        test_dup.handle_mutation("Nodes, 1", test_dup.layerchr_b[1],
-##                                test_dup.layerchr_b)
-##        self.assertEqual(test_dup.layerchr_b[1].nodes, 3)
-##        self.assertEqual(len(test_dup.weightchr_b), 30)
-##        #and adding nodes to one that did not used to have them
-##        test_dup.handle_mutation("Nodes, 3", test_dup.layerchr_b[1],
-##                                test_dup.layerchr_b)
-##        self.assertEqual(test_dup.layerchr_b[1].nodes, 6)
-##        self.assertEqual(len(test_dup.weightchr_b), 36)
-##        #more complicated case where different numbers of weights are needed
-##        #for different layers
-##        test_dup.layerchr_b.append(dgeann.LayerGene(5, False, False, 3,
-##                                                       "TEST2", ["QXLPYG"], 1,
-##                                                       "IP"))
-##        for i in range(7):
-##            test_dup.weightchr_b.append(dgeann.WeightGene(5, True, True, .01,
-##                                                             str(i), 3, i, 0,
-##                                                             "QXLPYG", "TEST2"))
-##        test_dup.handle_mutation("Nodes, 2", test_dup.layerchr_b[1],
-##                                test_dup.layerchr_b)
-##        self.assertEqual(test_dup.layerchr_b[1].nodes, 8)
-##        self.assertEqual(len(test_dup.weightchr_b), 56)
+        n_in, d = test_genome.find_n_inputs(test_gene, test_genome.layerchr_a)
+        test_genome.add_nodes(test_gene, test_genome.layerchr_a, 2,
+                              test_genome.weightchr_a, n_in)
+        test_gene.nodes += 2
+        self.assertEqual(len(test_genome.weightchr_a), 28)
+        self.assertEqual(len(test_genome.weightchr_b), 0)
+        #test that inputs/outputs are right
+        n = 0
+        for g in test_genome.weightchr_a[:6]:
+            self.assertEqual(g.out_node, n)
+            n += 1
+        n = 0
+        m = 0
+        for g in test_genome.weightchr_a[7:]:
+            self.assertEqual(g.in_node, n)
+            self.assertEqual(g.out_node, m)
+            m += 1
+            if m > 2:
+                m = 0
+                n += 1
+        #more complicated version: 3 outputs on 2 concats, weights on both chrs
+        out1 = dgeann.LayerGene(5, True, True, .017, "out1", ["tester"], 5, "IP")
+        out2 = dgeann.LayerGene(5, True, True, .017, "out2", ["tester", "d"], 3, "IP")
+        out3 = dgeann.LayerGene(5, True, True, .017, "out3", ["tester", "d"], 6, "IP")
+        test_gene.nodes = 3
+        weights = []
+        compare_weights = []
+        for i in range(4):
+            w = dgeann.WeightGene(5, True, False, .01, str(i), 3, 0, i, "d",
+                                     "tester")
+            if i < 3:
+                weights.append(w)
+            compare_weights.append(w)
+        for i in range(4):
+            for j in range(5):
+                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
+                                         i, j, "tester", "out1")
+                if i < 3:
+                    weights.append(w)
+                compare_weights.append(w)
+        for i in range(4):
+            for j in range (3):
+                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
+                                         i, j, "tester", "out2")
+                if i < 3:
+                    weights.append(w)
+                compare_weights.append(w)
+        for i in range(4):
+            for j in range (6):
+                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
+                                         i, j, "tester", "out3")
+                if i < 3:
+                    weights.append(w)
+                compare_weights.append(w)
+        test_genome2 = dgeann.Genome([test_in, test_gene, out1, out2, out3],
+                                     [], weights, weights)
+        n_in, d = test_genome.find_n_inputs(test_gene, test_genome.layerchr_a)
+        test_genome2.add_nodes(test_gene, test_genome2.layerchr_a, 1,
+                               test_genome2.weightchr_a, n_in)
+        test_genome2.add_nodes(test_gene, test_genome2.layerchr_b, 1,
+                               test_genome2.weightchr_b, n_in)
+        test_gene.nodes += 1     
+        #45 original + 1 + 5 + 3 + 6 = 60
+        self.assertEqual(len(test_genome2.weightchr_a), 60)
+        self.assertEqual(len(test_genome2.weightchr_b), 60)
+        for i in range(len(compare_weights)):
+            self.assertEqual(compare_weights[i].in_node,
+                             test_genome2.weightchr_a[i].in_node)
+            self.assertEqual(compare_weights[i].in_node,
+                             test_genome2.weightchr_b[i].in_node)
+            self.assertEqual(compare_weights[i].out_node,
+                             test_genome2.weightchr_a[i].out_node)
+            self.assertEqual(compare_weights[i].out_node,
+                             test_genome2.weightchr_b[i].out_node)
+        #now a case where the layer shrank in the past, then re-expands
+        test_gene.nodes -= 2
+        n_in, d = test_genome.find_n_inputs(test_gene, test_genome.layerchr_a)
+        test_genome2.add_nodes(test_gene, test_genome2.layerchr_a, 2,
+                               test_genome2.weightchr_a, n_in)
+        test_genome2.add_nodes(test_gene, test_genome2.layerchr_b, 2,
+                               test_genome2.weightchr_b, n_in)
+        test_gene.nodes += 2
+        self.assertEqual(len(test_genome2.weightchr_a), 60)
+        self.assertEqual(len(test_genome2.weightchr_b), 60)
+        for i in range(len(compare_weights)):
+            self.assertEqual(compare_weights[i].in_node,
+                             test_genome2.weightchr_a[i].in_node)
+            self.assertEqual(compare_weights[i].in_node,
+                             test_genome2.weightchr_b[i].in_node)
+            self.assertEqual(compare_weights[i].out_node,
+                             test_genome2.weightchr_a[i].out_node)
+            self.assertEqual(compare_weights[i].out_node,
+                             test_genome2.weightchr_b[i].out_node)
+        #and lastly a case where the layer shrank, but expanded to become
+        #larger than it originally was
+        test_gene.nodes -= 2
+        n_in, d = test_genome.find_n_inputs(test_gene, test_genome.layerchr_a)
+        test_genome2.add_nodes(test_gene, test_genome2.layerchr_a, 3,
+                               test_genome2.weightchr_a, n_in)
+        test_genome2.add_nodes(test_gene, test_genome2.layerchr_b, 3,
+                               test_genome2.weightchr_b, n_in)
+        test_gene.nodes +=3
+        self.assertEqual(len(test_genome2.weightchr_a), 75)
+        self.assertEqual(len(test_genome2.weightchr_b), 75)
+        compare_weights = []
+        for i in range(5):
+            w = dgeann.WeightGene(5, True, False, .01, str(i), 3, 0, i, "d",
+                                     "tester")
+            compare_weights.append(w)
+        for i in range(5):
+            for j in range(5):
+                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
+                                         i, j, "tester", "out1")
+                compare_weights.append(w)
+        for i in range(5):
+            for j in range (3):
+                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
+                                         i, j, "tester", "out2")
+                compare_weights.append(w)
+        for i in range(5):
+            for j in range (6):
+                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
+                                         i, j, "tester", "out3")
+                compare_weights.append(w)
+        for i in range(len(compare_weights)):
+            self.assertEqual(compare_weights[i].in_node,
+                             test_genome2.weightchr_a[i].in_node)
+            self.assertEqual(compare_weights[i].in_node,
+                             test_genome2.weightchr_b[i].in_node)
+            self.assertEqual(compare_weights[i].out_node,
+                             test_genome2.weightchr_a[i].out_node)
+            self.assertEqual(compare_weights[i].out_node,
+                             test_genome2.weightchr_b[i].out_node)    
+        
+    def test_handle_mutation(self):
+        test_weight_a = dgeann.WeightGene(5, True, False, 0, "au00",
+                                      3.00, 0, 0, "INa", "IPu")
+        test_weight_b = dgeann.WeightGene(4, True, False, 1.0, "au00",
+                                      3.00, 0, 0, "INa", "IPu")
+        test_layer_a = dgeann.LayerGene(5, True, False, 0, "INa",
+                                        [], 5, "input")
+        test_layer_b = dgeann.LayerGene(4, True, True, .01, "INa",
+                                        [], 5, "IP")
+        test_genome = dgeann.Genome([test_layer_a], [test_layer_b],
+                                      [test_weight_a], [test_weight_b])
+        test_genome.handle_mutation("Dom, 1", test_weight_a, "a")
+        self.assertEqual(test_weight_a.dom, 5)
+        test_genome.handle_mutation("Dom, -1", test_weight_a, "a")
+        self.assertEqual(test_weight_a.dom, 4)
+        test_genome.handle_mutation("Dom, 1", test_weight_b, "b")
+        self.assertEqual(test_weight_b.dom, 5)
+        test_genome.handle_mutation("Weight, 3.0", test_weight_a, "a")
+        self.assertEqual(test_weight_a.weight, 6.00)
+        test_genome.handle_mutation("Weight, -3.0", test_weight_b, "b")
+        self.assertEqual(test_weight_b.weight, 0.00)
+        test_genome.handle_mutation("Rate, -1", test_weight_a, "a")
+        self.assertEqual(test_weight_a.mut_rate, 0)
+        test_genome.handle_mutation("Rate, 1", test_weight_a, "a")
+        self.assertEqual(test_weight_a.mut_rate, 1)
+        test_genome.handle_mutation("Rate, 1", test_weight_b, "b")
+        self.assertEqual(test_weight_b.mut_rate, 1.0)
+        test_genome.handle_mutation("Rate, -1", test_weight_b, "b")
+        self.assertEqual(test_weight_b.mut_rate, 0)
+        #TODO not all layer mutations are going to be implemented yet
+        #but these ones are
+        test_genome.handle_mutation("Rate, -1", test_layer_a, "a")
+        self.assertEqual(test_layer_a.mut_rate, 0)
+        test_genome.handle_mutation("Rate, 1", test_layer_a, "a")
+        self.assertEqual(test_layer_a.mut_rate, 1)
+        test_genome.handle_mutation("Rate, -.001", test_layer_b, "b")
+        self.assertAlmostEqual(test_layer_b.mut_rate, .009)
+        test_genome.handle_mutation("Dom, 1", test_layer_a, "a")
+        self.assertEqual(test_layer_a.dom, 5)
+        test_genome.handle_mutation("Dom, -1", test_layer_a, "a")
+        self.assertEqual(test_layer_a.dom, 4)
+        test_genome.handle_mutation("Dom, 1", test_layer_b, "b")
+        self.assertEqual(test_layer_b.dom, 5)
+        #test duplication
+        test_in = dgeann.LayerGene(5, False, False, 0, "d", [], 1, "data")
+        test_dupl = dgeann.LayerGene(5, True, True, .017, "TEST", ["d"], 5, "IP")
+        test_dup = dgeann.Genome([], [test_in, test_dupl], [], [])
+        test_dup.handle_mutation("Duplicate,", test_dup.layerchr_b[1], "b",
+                                 test_dup.layerchr_b)
+        self.assertEqual(len(test_dup.layerchr_b), 3)
+        self.assertEqual(len(test_dup.layerchr_b[1].inputs), 1)
+        self.assertEqual(len(test_dup.layerchr_b[2].inputs), 2)
+        self.assertEqual(len(test_dup.weightchr_b), 30)
+        self.assertEqual(len(test_dup.weightchr_a), 30)
+        #test change in node #
+        #first losing nodes
+        test_dup.handle_mutation("Nodes, -3", test_dup.layerchr_b[1], "b",
+                                 test_dup.layerchr_b)
+        self.assertEqual(len(test_dup.weightchr_b), 30)
+        self.assertEqual(test_dup.layerchr_b[1].nodes, 2)
+        #now adding nodes to one that used to have them and don't need more
+        test_dup.handle_mutation("Nodes, 1", test_dup.layerchr_b[1], "b",
+                                test_dup.layerchr_b)
+        self.assertEqual(test_dup.layerchr_b[1].nodes, 3)
+        self.assertEqual(len(test_dup.weightchr_b), 30)
+        #and adding nodes to one that did not used to have them
+        test_dup.handle_mutation("Nodes, 3", test_dup.layerchr_b[1], "b",
+                                test_dup.layerchr_b)
+        self.assertEqual(test_dup.layerchr_b[1].nodes, 6)
+        self.assertEqual(len(test_dup.weightchr_b), 36)
+        #more complicated case where different numbers of weights are needed
+        #for different layers
+        test_dup.layerchr_b.append(dgeann.LayerGene(5, False, False, 3,
+                                                       "TEST2", ["QXLPYG"], 1,
+                                                       "IP"))
+        for i in range(7):
+            test_dup.weightchr_b.append(dgeann.WeightGene(5, True, True, .01,
+                                                             str(i), 3, i, 0,
+                                                             "QXLPYG", "TEST2"))
+        test_dup.handle_mutation("Nodes, 2", test_dup.layerchr_b[1], "b",
+                                test_dup.layerchr_b)
+        self.assertEqual(test_dup.layerchr_b[1].nodes, 8)
+        self.assertEqual(len(test_dup.weightchr_b), 56)
         
     def test_mutate(self):
         dgeann.random.seed("genetic1")

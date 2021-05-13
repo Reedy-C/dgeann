@@ -691,12 +691,13 @@ class Genome(object):
             if result != "":
                 self.handle_mutation(result, weight, "b", self.weightchr_b)
 
-    #helper function for mutate
+    #helper function for mutate 
     def handle_mutation(self, result, gene, c, chro=None):
         """Handle changing a gene that has been mutated.
         """
         #this could be more complicated to take into account whether
         #the mutation actually changes anything, but keeping it simple for now
+        #c is whether the chromosome is a or b, used for the mutaiton record
         if record_muts:
             self.mut_record.append([c, gene.ident, result])
         val = result[(result.index(",") + 2)::]
