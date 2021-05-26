@@ -142,6 +142,7 @@ class testLayer(unittest.TestCase):
                                           ["data", "STM"], 6, "IP")
         
     def test_makestring(self):
+        dgeann.random.seed("genetic")
         test_data = dedent("""\
                             input: \"data\"
                             input_shape: {
@@ -152,12 +153,12 @@ class testLayer(unittest.TestCase):
         self.assertEqual(test_data, self.data.read_out({}, {}))
         test_action = dedent('''\
                     layer {
-                      name: "JOLNSR"
+                      name: "CEKMKT"
                       type: "Concat"
 
                       bottom: "data"
                       bottom: "STM"
-                      top: "JOLNSR"
+                      top: "CEKMKT"
                       concat_param {
                         axis: 1
                       }
@@ -177,7 +178,7 @@ class testLayer(unittest.TestCase):
                           value: 0
                         }
                       }
-                      bottom: "JOLNSR"
+                      bottom: "CEKMKT"
                       top: "action"
                     }
                         ''')
@@ -1585,6 +1586,49 @@ class testRecombination(unittest.TestCase):
                 if gene.ident == weight.ident:
                     aru = True
             self.assertTrue(aru)
+
+#while DGEANN is meant to deal with diploidy, haploidy is also an option
+#tests haploid cases
+class testHaploid(unittest.TestCase):
+
+    def test_recomb(self):
+        dgeann.random.seed("genetic")
+        layer_a = dgeann.LayerGene(5, False, False, 0, "A", [], 1, "input")
+        layer_b = dgeann.LayerGene(5, False, False, 0, "B", [], 1, "input")
+        layer_c = dgeann.LayerGene(5, False, False, 0, "C", ["A", "B"],
+                                   1, "IP")
+        layer_d = dgeann.LayerGene(5, False, False, 0, "D", ["A", "B"],
+                                   1, "IP")
+        weight_a = dgeann.WeightGene(5, False, False, 0, "a", 3.00, 0, 0,
+                                     "A", "C")
+        weight_b = dgeann.WeightGene(5, False, False, 0, "b", 3.00, 0, 0,
+                                     "B", "D")
+        haploid_a = dgeann.HaploidGenome([layer_a, layer_b, layer_c],
+                                         [weight_a])
+        haploid_b = dgeann.HaploidGenome([layer_b, layer_b, layer_d],
+                                         [weight_b])
+        haploid_c = haploid_a.recombine(haploid_b)
+        self.assertEqual(len(haploid_c.layerchr_a), 3)
+        self.assertEqual(len(haploid_c.layerchr_b), 0)
+        self.assertEqual(len(haploid_c.weightchr_a), 1)
+        self.assertEqual(len(haploid_c.weightchr_b), 0)
+        self.assertEqual(haploid_c.layerchr_a[2].ident, "D")
+        self.assertEqual(haploid_c.weightchr_a[0].ident, "a")
+
+    def test_build(self):
+        dgeann.random.seed("genetic")
+        layer_a = dgeann.LayerGene(5, False, False, 0, "A", [], 1, "input")
+        layer_b = dgeann.LayerGene(5, False, False, 0, "B", [], 1, "input")
+        layer_c = dgeann.LayerGene(5, False, False, 0, "C", ["A", "B"],
+                                   1, "IP")
+        weight_a = dgeann.WeightGene(5, False, False, 0, "a", 3.00, 0, 0,
+                                     "A", "C")
+        haploid_a = dgeann.HaploidGenome([layer_a, layer_b, layer_c],
+                                         [weight_a])
+        hapa = haploid_a.build()
+        self.assertEqual(len(hapa.net.params["C"][0].data[0]), 2)
+        self.assertEqual(hapa.net.params["C"][0].data[0][0], 3.0)
+        
 
 if __name__ == '__main__':
     unittest.main()

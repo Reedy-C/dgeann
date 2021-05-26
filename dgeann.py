@@ -314,7 +314,6 @@ class Genome(object):
         inserting null layers into the shorter one.
         """
         if len(self.layerchr_a) != len(self.layerchr_b):
-            #print(len(self.layerchr_a), len(self.layerchr_b))
             n = 0
             m = 0
             #run through backwards
