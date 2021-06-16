@@ -321,7 +321,7 @@ class testBuild(unittest.TestCase):
         ident = dgeann.network_ident()
         self.assertEqual(ident, "T125-659-499")
 
-    def test_build_layers(self):
+    def test_layers_equalize_simple(self):
         self.l_unread_a.inputs = []
         self.l_unread_a.layer_type = 'input'
         #layers_equalize
@@ -345,7 +345,11 @@ class testBuild(unittest.TestCase):
         for i in range(len(g1.layerchr_b)):
             self.assertEqual(g1.layerchr_b[i].ident,
                              g1_test.layerchr_b[i].ident)
+            
+    def test_layers_equalize_unequal(self):
         #case where chr a has an extra gene
+        null = dgeann.LayerGene(3, False, False, 0, "null", [],
+                                 None, None)
         g2 = dgeann.Genome([self.l_unread_a, self.l_low_dom_a,
                             self.l_low_dom_b, self.l_dummy_layer],
                            [self.l_unread_a, self.l_high_dom,
@@ -420,6 +424,10 @@ class testBuild(unittest.TestCase):
         for i in range(len(g5.layerchr_b)):
             self.assertEqual(g5.layerchr_b[i].ident,
                              g5_test.layerchr_b[i].ident)
+            
+    def test_layers_equalize_IPlayers(self):
+        null = dgeann.LayerGene(3, False, False, 0, "null", [],
+                                 None, None)
         #case where chromosomes are equal, but with IP layers
         IPG = dgeann.LayerGene(5, False, False, 0, "G",
                                 ["askl"], 2, "IP")
@@ -445,7 +453,51 @@ class testBuild(unittest.TestCase):
         self.assertEqual(len(g7.layerchr_b), 4)
         for i in range(4):
             self.assertEqual(g7.layerchr_b[i].ident, g7_test_b[i].ident)
-        #structure_network
+            
+    def test_structure_network(self):
+        null = dgeann.LayerGene(3, False, False, 0, "null", [],
+                                 None, None)
+        g1 = dgeann.Genome([self.l_unread_a, self.l_low_dom_a,
+                            self.l_dummy_layer],
+                           [self.l_unread_a, self.l_high_dom,
+                            self.l_dummy_layer], [], [])
+        g2 = dgeann.Genome([self.l_unread_a, self.l_low_dom_a,
+                            self.l_low_dom_b, self.l_dummy_layer],
+                           [self.l_unread_a, self.l_high_dom,
+                            self.l_dummy_layer], [], [])
+        g2.layers_equalize()
+        g3 = dgeann.Genome([self.l_unread_a, self.l_low_dom_a,
+                            self.l_dummy_layer],
+                           [self.l_unread_a, self.l_low_dom_b, self.l_high_dom,
+                            self.l_dummy_layer], [], [])
+        g3.layers_equalize()
+        g4 = dgeann.Genome([self.l_unread_a, self.l_low_dom_a, self.l_low_dom_b,
+                            self.l_low_dom_c, self.l_dummy_layer],
+                            [self.l_unread_a, self.l_low_dom_b, self.l_high_dom,
+                            self.l_dummy_layer], [], [])
+        g4.layers_equalize()
+        g5 = dgeann.Genome([self.l_unread_a, self.l_low_dom_a,
+                            self.l_dummy_layer],
+                           [self.l_unread_a, self.l_low_dom_c,
+                            self.l_low_dom_b, self.l_low_dom_a,
+                            self.l_high_dom, self.l_dummy_layer], [], [])
+        g5.layers_equalize()
+        IPG = dgeann.LayerGene(5, False, False, 0, "G",
+                                ["askl"], 2, "IP")
+        IPH = dgeann.LayerGene(5, False, False, 0, "H",
+                                ["askl"], 2, "IP")
+        IPI = dgeann.LayerGene(5, False, False, 0, "I",
+                                ["G"], 2, "IP")
+        IPJ = dgeann.LayerGene(5, False, False, 0, "J",
+                                ["H"], 2, "IP")
+        IPK = dgeann.LayerGene(5, False, False, 0, "K",
+                                ["G", "H"], 2, "IP")
+        askl = dgeann.LayerGene(1, False, False, 0, "askl", [], 2, "data")
+        g6 = dgeann.Genome([askl, IPG, IPI],
+                            [askl, IPH, IPJ], [], [])
+        g7 = dgeann.Genome([askl, IPG, IPH, IPK],
+                            [askl, IPG, IPI], [], [])
+        g7.layers_equalize()
         dgeann.random.seed("evo-devo")
         g1_sub, g1_list, g1_layout = g1.structure_network({})
         g2_sub, g2_list, g2_layout = g2.structure_network({})
@@ -454,25 +506,21 @@ class testBuild(unittest.TestCase):
         g5_sub, g5_list, g5_layout = g5.structure_network({})
         g6_sub, g6_list, g6_layout = g6.structure_network({})
         g7_sub, g7_list, g7_layout = g7.structure_network({})
-        g1_testlist = {"askl": 3, "ijkl": 2, "blegh": 5}
-        g2_testlist = {"askl": 3, "ijkl": 2, "blegh": 5}
-        g3_testlist = {"askl": 3, "efgh": 5, "blegh": 5, "ijkl": 2}
-        g4_testlist = {"askl": 3, "data": 8, "blegh": 5, "ijkl": 2}
-        g5_testlist = {"askl": 3, "data": 8, "ijkl": 2, "blegh": 5}
-        g6_testlist = {"askl": 3, "H": 2, "I": 2}
-        g7_testlist = {"askl": 3, "G": 2, "H": 2, "I": 2}
-        g1_testlayout = [self.l_unread_a, self.l_high_dom,
-                            self.l_dummy_layer]
-        g2_testlayout = [self.l_unread_a, self.l_high_dom,
-                            self.l_dummy_layer]
-        g3_testlayout = [self.l_unread_a, self.l_low_dom_b, self.l_high_dom,
-                         self.l_dummy_layer]
-        g4_testlayout = [self.l_unread_a, self.l_low_dom_a, self.l_high_dom,
-                         self.l_dummy_layer]
-        g5_testlayout = [self.l_unread_a, self.l_low_dom_a, self.l_high_dom,
-                         self.l_dummy_layer]
-        g6_testlayout = [self.l_unread_a, IPH, IPI]
-        g7_testlayout = [self.l_unread_a, IPG, IPH, IPI]
+        g1_testlist = {"ijkl": 2, "blegh": 5}
+        g2_testlist = {"ijkl": 2, "blegh": 5}
+        g3_testlist = {"data": 8, "blegh": 5, "ijkl": 2}
+        g4_testlist = {"efgh": 5, "blegh": 5, "ijkl": 2}
+        g5_testlist = {"data": 8, "ijkl": 2, "blegh": 5}
+        g6_testlist = {"askl": 2, "G": 2, "J": 2}
+        #substitution happens here
+        g7_testlist = {"askl": 2, "G": 2, "I": 2, "K": 2}
+        g1_testlayout = [self.l_high_dom, self.l_dummy_layer]
+        g2_testlayout = [self.l_high_dom, self.l_dummy_layer]
+        g3_testlayout = [self.l_low_dom_a, self.l_high_dom, self.l_dummy_layer]
+        g4_testlayout = [self.l_low_dom_b, self.l_high_dom, self.l_dummy_layer]
+        g5_testlayout = [self.l_low_dom_a, self.l_high_dom, self.l_dummy_layer]
+        g6_testlayout = [askl, IPG, IPJ]
+        g7_testlayout = [askl, IPG, IPI, IPK]
         listlists = [g1_list, g2_list, g3_list, g4_list, g5_list, g6_list,
                      g7_list]
         testlists = [g1_testlist, g2_testlist, g3_testlist, g4_testlist,
@@ -488,12 +536,26 @@ class testBuild(unittest.TestCase):
                 self.assertEqual(gene.ident, testlayouts[i][j].ident)
                 j += 1
         self.assertEqual(g6.layerchr_a[2].inputs, ["G"])
-        self.assertEqual(g6_layout[2].inputs, ["H"])
-        #build_layers
-        g6 = dgeann.Genome([self.l_unread_a, IPG, IPI],
-                            [self.l_unread_a, IPH, IPJ], [], [], ["I"])
-        g7 = dgeann.Genome([self.l_unread_a, IPG, IPH, IPK],
-                            [self.l_unread_a, IPG, IPI], [], [], ["I"])
+        self.assertEqual(g6_layout[2].inputs, ["G"])
+
+    def test_build_layers_text(self):
+        askl = dgeann.LayerGene(1, False, False, 0, "askl", [], 3, "input")
+        IPG = dgeann.LayerGene(5, False, False, 0, "G",
+                                ["askl"], 2, "IP")
+        IPH = dgeann.LayerGene(5, False, False, 0, "H",
+                                ["askl"], 2, "IP")
+        IPI = dgeann.LayerGene(5, False, False, 0, "I",
+                                ["G"], 2, "IP")
+        IPJ = dgeann.LayerGene(5, False, False, 0, "J",
+                                ["H"], 2, "IP")
+        IPK = dgeann.LayerGene(5, False, False, 0, "I",
+                                ["G", "H"], 2, "IP")
+        g6 = dgeann.Genome([askl, IPG, IPI],
+                            [askl, IPH, IPJ], [], [])
+        g7 = dgeann.Genome([askl, IPG, IPH, IPK],
+                            [askl, IPG, IPI], [], [])
+        g7.layers_equalize()
+        dgeann.random.seed("evo-devo")
         g6_list, g6_concats, g6_sub = g6.build_layers({}, "g6.txt", {})
         g6_test = dedent('''\
                         input: "askl"
@@ -502,7 +564,7 @@ class testBuild(unittest.TestCase):
                           dim: 3
                         }
                         layer {
-                          name: "H"
+                          name: "G"
                           type: "InnerProduct"
                           param { lr_mult: 1 decay_mult: 1}
                           param { lr_mult: 2 decay_mult: 0}
@@ -517,10 +579,10 @@ class testBuild(unittest.TestCase):
                             }
                           }
                           bottom: "askl"
-                          top: "H"
+                          top: "G"
                         }
                         layer {
-                          name: "J"
+                          name: "I"
                           type: "InnerProduct"
                           param { lr_mult: 1 decay_mult: 1}
                           param { lr_mult: 2 decay_mult: 0}
@@ -534,10 +596,11 @@ class testBuild(unittest.TestCase):
                               value: 0
                             }
                           }
-                          bottom: "H"
-                          top: "J"
+                          bottom: "G"
+                          top: "I"
                         }
                         ''')
+        
         f = open("g6_test.txt", "a")
         f.write(g6_test)
         f.close()
@@ -589,12 +652,12 @@ class testBuild(unittest.TestCase):
                           top: "H"
                         }
                         layer {
-                          name: "BDETTX"
+                          name: "OEHJCT"
                           type: "Concat"
 
                           bottom: "G"
                           bottom: "H"
-                          top: "BDETTX"
+                          top: "OEHJCT"
                           concat_param {
                             axis: 1
                           }
@@ -614,7 +677,7 @@ class testBuild(unittest.TestCase):
                               value: 0
                             }
                           }
-                          bottom: "BDETTX"
+                          bottom: "OEHJCT"
                           top: "I"
                         }
                         ''')
@@ -629,6 +692,8 @@ class testBuild(unittest.TestCase):
         os.remove("g7.txt")
         os.remove("g6_test.txt")
         os.remove("g7_test.txt")
+        
+    def test_build_layers_null(self):
         #case based on chopped-down real example
         #should compare null against can't-be-read ("P" when "M" is not read)
         dgeann.random.seed("evo|devo")
