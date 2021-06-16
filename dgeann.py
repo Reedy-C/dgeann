@@ -87,9 +87,8 @@ layer_dict = {"input":'''\
 #3 is probability of a number of nodes mutation
 #4 is probability of a duplication mutation
 #5 is probability of an add input mutation (currently not implemented)
-#this can be changed, but numbers should add up to ~1
+#this can be changed, but numbers should add up to 1
 #(or mutations will not happen correctly)
-#TODO - check that?
 #current probabilities were basically made up on the spot
 layer_mut_probs = (0.333, 0.234, 0.167, 0.133, 0.133)
 
@@ -178,7 +177,6 @@ class Genome(object):
             layer_b.append(self.layerchr_b[x])
         for x in range(lay_cross, len(self.layerchr_a)):
             layer_b.append(self.layerchr_a[x])
-        #TODO
         if m > 0:
             weight_cross = random.randint(1, m)
         else:
@@ -572,7 +570,6 @@ class Genome(object):
         #values is a list formatted as:
         #input (str), in node, output (str), out node, weight
         #with perhaps another set for a second weight adjustment
-        #TODO no use for input str?
         output = values[2]
         out_node = values[3]
         in_node = values[1]
@@ -640,7 +637,7 @@ class Genome(object):
         for i in (list(net._bottom_ids(list(net._layer_names).index(
             in_layer)))):
             ins = list(net._blob_names)[i]
-            #TODO can concats still end up stacked? assuming not for now
+            #assuming concats should no longer end up stacked
             off = self.create_rweights(ins, d, out_layer, net, off)
         return off
 
@@ -1115,7 +1112,6 @@ class LayerGene(Gene):
         elif roll > layer_mut_probs[0] and roll < sum(layer_mut_probs[0:2]):
             change = 0
             while change == 0:
-                #TODO test
                 change = random.gauss(0, sigma)
                 while change + self.mut_rate > 1 or change + self.mut_rate <= 0:
                     change = random.gauss(0, sigma)
