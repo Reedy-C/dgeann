@@ -105,44 +105,12 @@ class testWeight(unittest.TestCase):
 class testLayer(unittest.TestCase):
 
     def setUp(self):
-        self.active_list = {"cake": 5, "onion": 7}
         self.unread_a = dgeann.LayerGene(5, False, False, 0, "askl",
                                             ["stairs"], 3, "IP")
-        self.unread_b = dgeann.LayerGene(5, False, False, 0, "askl",
-                                            ["cake", "onion", "strata"], 3, "IP")
-        self.low_dom_a = dgeann.LayerGene(1, False, False, 0, "abcd",
-                                             ["cake"], 4, "IP")
-        self.low_dom_b = dgeann.LayerGene(1, False, False, 0, "efgh",
-                                             ["cake"], 1, "IP")
-        self.high_dom = dgeann.LayerGene(5, False, False, 0, "ijkl",
-                                            ["cake"], 2, "IP")
-        self.other_layer = dgeann.LayerGene(3, False, False, 0, "mnop",
-                                              ["onion"], 3, "IP")
-        self.multiple_layer = dgeann.LayerGene(3, False, False, 0, "qrst",
-                                                  ["cake", "onion"], 3, "IP")
-        self.no_inputs = dgeann.LayerGene(3, False, False, 0, "uvwx",
-                                             [], 3, "input")
-        self.mut_rate = dgeann.LayerGene(3, True, False, .9, "askl",
-                                            [], 3, "input")
-        self.mut_dom = dgeann.LayerGene(3, True, False, 1.0, "askl",
-                                          [], 3, "input")
-        self.mut_num = dgeann.LayerGene(3, True, False, 1.0, "askl",
-                                           [], 5, "input")
-        self.mut_dup = dgeann.LayerGene(3, True, True, 1.0, "askl",
-                                            [], 5, "input")
-        self.mut_add_input = dgeann.LayerGene(3, True, False, 1.0, "askl",
-                                                [], 5, "")
-        self.data = dgeann.LayerGene(5, False, False, 0, "data",
-                                        [], 9, "input")
-        self.stm_input = dgeann.LayerGene(5, False, False, 0, "stm_input",
-                                             ["data", "reward"], 6, "input")
-        self.stm = dgeann.LayerGene(5, False, False, 0, "STM",
-                                       ["stm_input"], 6, "STMlayer")
-        self.action = dgeann.LayerGene(5, False, False, 0, "action",
-                                          ["data", "STM"], 6, "IP")
         
     def test_makestring(self):
         dgeann.random.seed("genetic")
+        data = dgeann.LayerGene(5, False, False, 0, "data", [], 9, "input")
         test_data = dedent("""\
                             input: \"data\"
                             input_shape: {
@@ -150,7 +118,9 @@ class testLayer(unittest.TestCase):
                               dim: 9
                             }
                             """)
-        self.assertEqual(test_data, self.data.read_out({}, {}))
+        self.assertEqual(test_data, data.read_out({}, {}))
+        action = dgeann.LayerGene(5, False, False, 0, "action",
+                                  ["data", "STM"], 6, "IP")
         test_action = dedent('''\
                     layer {
                       name: "CEKMKT"
@@ -182,69 +152,95 @@ class testLayer(unittest.TestCase):
                       top: "action"
                     }
                         ''')
-        self.assertEqual(test_action, self.action.read_out({}, {"data": 9,
-                                                                "STM": 5}))
+        self.assertEqual(test_action, action.read_out({}, {"data": 9,
+                                                            "STM": 5}))
         
     def test_read(self):
+        active_list = {"cake": 5, "onion": 7}
+        unread_b = dgeann.LayerGene(5, False, False, 0, "askl",
+                                            ["cake", "onion", "strata"], 3, "IP")
+        low_dom_a = dgeann.LayerGene(1, False, False, 0, "abcd",
+                                             ["cake"], 4, "IP")
+        low_dom_b = dgeann.LayerGene(1, False, False, 0, "efgh",
+                                             ["cake"], 1, "IP")
+        high_dom = dgeann.LayerGene(5, False, False, 0, "ijkl",
+                                            ["cake"], 2, "IP")
+        other_layer = dgeann.LayerGene(3, False, False, 0, "mnop",
+                                              ["onion"], 3, "IP")
+        multiple_layer = dgeann.LayerGene(3, False, False, 0, "qrst",
+                                                  ["cake", "onion"], 3, "IP")
+        no_inputs = dgeann.LayerGene(3, False, False, 0, "uvwx",
+                                             [], 3, "input")
+        stm_input = dgeann.LayerGene(5, False, False, 0, "stm_input",
+                                             ["data", "reward"], 6, "input")
+        stm = dgeann.LayerGene(5, False, False, 0, "STM",
+                                       ["stm_input"], 6, "STMlayer")
         dgeann.random.seed("layers")
         concat_dict = {}
         #a case where neither is read
-        test_a = self.unread_a.read(self.active_list, self.unread_b, {}, {})
+        test_a = self.unread_a.read(active_list, unread_b, {}, {})
         self.assertEqual(test_a, None)
         #a case where the first is read
-        test_b = self.low_dom_a.read(self.active_list, self.unread_a, {}, {})
-        self.assertEqual(test_b, self.low_dom_a)
+        test_b = low_dom_a.read(active_list, self.unread_a, {}, {})
+        self.assertEqual(test_b, low_dom_a)
         #a case where the second is read
-        test_c = self.unread_a.read(self.active_list, self.low_dom_a, {}, {})
-        self.assertEqual(test_c, self.low_dom_a)
+        test_c = self.unread_a.read(active_list, low_dom_a, {}, {})
+        self.assertEqual(test_c, low_dom_a)
         #a case where they have the same dom
-        test_d = self.low_dom_a.read(self.active_list, self.low_dom_b, {}, {})
-        self.assertEqual(test_d, self.low_dom_b)
+        test_d = low_dom_a.read(active_list, low_dom_b, {}, {})
+        self.assertEqual(test_d, low_dom_b)
         #a case where the first dominates
-        test_e = self.high_dom.read(self.active_list, self.low_dom_a, {}, {})
-        self.assertEqual(test_e, self.high_dom)
+        test_e = high_dom.read(active_list, low_dom_a, {}, {})
+        self.assertEqual(test_e, high_dom)
         #a case where the second dominates
-        test_f = self.low_dom_b.read(self.active_list, self.high_dom, {}, {})
-        self.assertEqual(test_f, self.high_dom)
+        test_f = low_dom_b.read(active_list, high_dom, {}, {})
+        self.assertEqual(test_f, high_dom)
         #a case with null other gene (and two dependencies)
         null = dgeann.LayerGene(0, False, False, 0, "null", [], None, None)
-        test_g = self.multiple_layer.read(self.active_list, null, {}, {})
-        self.assertEqual(test_g, self.multiple_layer)
+        test_g = multiple_layer.read(active_list, null, {}, {})
+        self.assertEqual(test_g, multiple_layer)
         #a case with no other gene (and no dependencies)
-        test_h = self.no_inputs.read(self.active_list, null, {}, {})
-        self.assertEqual(test_h, self.no_inputs)
+        test_h = no_inputs.read(active_list, null, {}, {})
+        self.assertEqual(test_h, no_inputs)
         #a case where the other gene has no dependencies
-        test_i = self.low_dom_a.read(self.active_list, self.no_inputs, {}, {})
-        self.assertEqual(test_i, self.no_inputs)
-        
+        test_i = low_dom_a.read(active_list, no_inputs, {}, {})
+        self.assertEqual(test_i, no_inputs)
         
     def test_mutate(self):
+        mut_rate = dgeann.LayerGene(3, True, False, .9, "askl",
+                                            [], 3, "input")
+        mut_dom = dgeann.LayerGene(3, True, False, 1.0, "askl",
+                                          [], 3, "input")
+        mut_num = dgeann.LayerGene(3, True, False, 1.0, "askl",
+                                           [], 5, "input")
+        mut_dup = dgeann.LayerGene(3, True, True, 1.0, "askl",
+                                            [], 5, "input")
+        mut_add_input = dgeann.LayerGene(3, True, False, 1.0, "askl",
+                                                [], 5, "")
         dgeann.random.seed("vigor")
         test_mut_off = self.unread_a.mutate()
         self.assertEqual(test_mut_off, "")
         dgeann.random.random()
         dgeann.random.random()
-        test_mut_dom = self.mut_dom.mutate()
+        test_mut_dom = mut_dom.mutate()
         self.assertEqual(test_mut_dom, "Dom, 1")
         dgeann.random.seed("vigor")
-        test_mut_rate = self.mut_rate.mutate()
+        test_mut_rate = mut_rate.mutate()
         self.assertEqual(test_mut_rate, "Rate, 1.0064147264152894e-05")
         dgeann.random.random()
         dgeann.random.random()
-        test_mut_num = self.mut_num.mutate()
+        test_mut_num = mut_num.mutate()
         self.assertEqual(test_mut_num, "Nodes, 1")
         dgeann.random.random()
         dgeann.random.random()
         dgeann.random.random()
-        test_mut_dup = self.mut_dup.mutate()
+        test_mut_dup = mut_dup.mutate()
         self.assertEqual(test_mut_dup, "Duplicate,")
         dgeann.random.seed("vigor")
-        i = 0
-        while i != 7:
+        for i in range(7):
             dgeann.random.random()
-            i += 1
-        test_mut_input = self.mut_add_input.mutate()
-        self.assertEqual(test_mut_input, "Add input,")        
+        test_mut_input = mut_add_input.mutate()
+        self.assertEqual(test_mut_input, "Add input,")       
 
 #tests that genome builds a new creature properly
 #along with tests for helper functions
@@ -787,14 +783,10 @@ class testBuild(unittest.TestCase):
         concat_genome.concat_adjust(concat_dict)
         cwa = concat_genome.weightchr_a
         cwb = concat_genome.weightchr_b
-        self.assertEqual(cwa[0].alt_in, 0)
-        self.assertEqual(cwa[1].alt_in, 0)
-        self.assertEqual(cwa[2].alt_in, 5)
-        self.assertEqual(cwa[3].alt_in, 5)
-        self.assertEqual(cwb[0].alt_in, 0)
-        self.assertEqual(cwb[1].alt_in, 0)
-        self.assertEqual(cwb[2].alt_in, 5)
-        self.assertEqual(cwb[3].alt_in, 5)
+        results = [0, 0, 5, 5]
+        for i in range(len(results)):
+            self.assertEqual(cwa[i].alt_in, results[i])
+            self.assertEqual(cwb[i].alt_in, results[i])
         #test with two inputs
         e_u_00 = dgeann.WeightGene(5, False, False, 0, "ie00",
                                       3.00, 0, 0, "INe", "IPu")
@@ -811,14 +803,9 @@ class testBuild(unittest.TestCase):
         concat_genome2.concat_adjust(concat_dict2)
         cwa = concat_genome2.weightchr_a
         cwb = concat_genome2.weightchr_b
-        self.assertEqual(cwa[0].alt_in, 0)
-        self.assertEqual(cwa[1].alt_in, 0)
-        self.assertEqual(cwa[2].alt_in, 5)
-        self.assertEqual(cwa[3].alt_in, 5)
-        self.assertEqual(cwb[0].alt_in, 0)
-        self.assertEqual(cwb[1].alt_in, 0)
-        self.assertEqual(cwb[2].alt_in, 5)
-        self.assertEqual(cwb[3].alt_in, 5)
+        for i in range(len(results)):
+            self.assertEqual(cwa[i].alt_in, results[i])
+            self.assertEqual(cwb[i].alt_in, results[i])
         
     def test_build_weights(self):
         act = dgeann.LayerGene(5, False, False, 0, "action", ["data"], 5, "IP")
@@ -1555,7 +1542,6 @@ class testRecombination(unittest.TestCase):
         self.assertEqual(n, 4)
         self.assertEqual(m, 3)
         n, m = self.genome_b.last_shared()
-        #...I *think* this is how I want it
         self.assertEqual(n, 4)
         self.assertEqual(m, 5)
         n, m = self.genome_c.last_shared()
