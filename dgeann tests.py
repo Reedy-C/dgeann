@@ -4,31 +4,23 @@ import unittest
 
 import caffe
 import dgeann
-
+from dgeann import WeightGene as wg
+from dgeann import LayerGene as lg
 
 #tests that weight genes read and mutate properly
 class testWeight(unittest.TestCase):
 
     def setUp(self):
-        self.active_list = {"testa": 6, "testb": 3}
-        self.unread_a = dgeann.WeightGene(1, False, False, 0, "asld",
-                                             0.00, 0, 0, "nonexistant", "none")
-        self.unread_b = dgeann.WeightGene(1, False, False, 0, "asld",
-                                             0.00, 6, 0, "testa", "testb")
-        self.low_dom_a = dgeann.WeightGene(1, False, False, 0, "asld",
-                                             0.00, 3, 0, "testa", "testb")
-        self.low_dom_b = dgeann.WeightGene(1, False, False, 0, "asld",
-                                             5.00, 3, 0, "testa", "testb")
-        self.high_dom = dgeann.WeightGene(5, False, False, 0, "asld",
-                                             3.00, 3, 0, "testa", "testb")
-        self.other_weight = dgeann.WeightGene(5, False, False, 0, "asld",
-                                             3.00, 5, 0, "testa", "testb")
-        self.mut_weight = dgeann.WeightGene(1, True, False, 1.0, "asld",
-                                              3.00, 5, 0, "testa", "testb")
-        self.mut_rate = dgeann.WeightGene(1, True, False, .99, "asld",
-                                            3.00, 5, 0, "testa", "testb")
-        self.mut_dom = dgeann.WeightGene(1, True, False, .35, "asld",
-                                           3.00, 5, 0, "testa", "testb")
+        self.active_list = {"A": 6, "B": 3}
+        self.unread_a = wg(1, False, False, 0, "asld", 0.00, 0, 0, "n", "N")
+        self.unread_b = wg(1, False, False, 0, "asld", 0.00, 6, 0, "A", "B")
+        self.low_dom_a = wg(1, False, False, 0, "asld", 0.00, 3, 0, "A", "B")
+        self.low_dom_b = wg(1, False, False, 0, "asld", 5.00, 3, 0, "A", "B")
+        self.high_dom = wg(5, False, False, 0, "asld", 3.00, 3, 0, "A", "B")
+        self.other_weight = wg(5, False, False, 0, "asld", 3.00, 5, 0, "A", "B")
+        self.mut_weight = wg(1, True, False, 1.0, "asld", 3.00, 5, 0, "A", "B")
+        self.mut_rate = wg(1, True, False, .99, "asld", 3.00, 5, 0, "A", "B")
+        self.mut_dom = wg(1, True, False, .35, "asld", 3.00, 5, 0, "A", "B")
         dgeann.random.seed("vigor")
 
     def test_canread(self):
@@ -38,12 +30,12 @@ class testWeight(unittest.TestCase):
         self.assertFalse(result_b)
         result_true = self.low_dom_a.can_read(self.active_list, {})
         self.assertTrue(result_true)
-        result = dgeann.WeightGene(1, False, False, 0, "A", 1.0, 0, 0,
-                                    "Z", "Y").can_read({"X": 1, "Y": 1},
-                                                       {"Z": "X"})
+        result = wg(1, False, False, 0, "A", 1.0, 0, 0, "Z", "Y").can_read(
+                                                        {"X": 1, "Y": 1},
+                                                        {"Z": "X"})
         self.assertTrue(result)
-        result = dgeann.WeightGene(1, False, False, 0, "A", 1.0, 0, 0,
-                                    "Z", "Y").can_read({"X": 1, "Y": 1}, {})
+        result = wg(1, False, False, 0, "A", 1.0, 0, 0, "Z", "Y").can_read(
+                                                        {"X": 1, "Y": 1}, {})
         self.assertFalse(result)
 
     def test_read(self):          
@@ -52,28 +44,28 @@ class testWeight(unittest.TestCase):
         self.assertEqual(test_a, None)
         #case where only *this* node can be read
         test_b = self.low_dom_a.read(self.active_list, {}, self.unread_a)
-        self.assertEqual(test_b, ["testa", 3, "testb", 0, 0.00])
+        self.assertEqual(test_b, ["A", 3, "B", 0, 0.00])
         #case where only *other* node can be read
         test_c = self.unread_a.read(self.active_list, {}, self.low_dom_a)
-        self.assertEqual(test_c, ["testa", 3, "testb", 0, 0.00])
+        self.assertEqual(test_c, ["A", 3, "B", 0, 0.00])
         #case where this node dominates
         test_d = self.high_dom.read(self.active_list, {}, self.low_dom_a)
-        self.assertEqual(test_d, ["testa", 3, "testb", 0, 3.00])
+        self.assertEqual(test_d, ["A", 3, "B", 0, 3.00])
         #case where that node dominates
         test_e = self.low_dom_a.read(self.active_list, {}, self.high_dom)
-        self.assertEqual(test_e, ["testa", 3, "testb", 0, 3.00])
+        self.assertEqual(test_e, ["A", 3, "B", 0, 3.00])
         #case where they co-dominate
         test_f = self.low_dom_a.read(self.active_list, {}, self.low_dom_b)
-        self.assertEqual(test_f, ["testa", 3, "testb", 0, 2.50])
+        self.assertEqual(test_f, ["A", 3, "B", 0, 2.50])
         #case where they are both read, for different weights
         test_g = self.low_dom_a.read(self.active_list, {}, self.other_weight)
-        self.assertEqual(test_g, ["testa", 3, "testb", 0, 0.00,
-                                  "testa", 5, "testb", 0, 3.00])
+        self.assertEqual(test_g, ["A", 3, "B", 0, 0.00,
+                                  "A", 5, "B", 0, 3.00])
         #case where there is no other gene
         test_h = self.low_dom_a.read(self.active_list, {})
-        self.assertEqual(test_h, ["testa", 3, "testb", 0, 0.00])
+        self.assertEqual(test_h, ["A", 3, "B", 0, 0.00])
         #sub_dict case
-        test_i = dgeann.WeightGene(1, False, False, 0, "A", 1.0, 0, 0,
+        test_i = wg(1, False, False, 0, "A", 1.0, 0, 0,
                                     "Z", "Y").read({"X": 1, "Y": 1}, {"Z": "X"})
         self.assertEqual(test_i, ["X", 0, "Y", 0, 1.0])
 
@@ -105,12 +97,11 @@ class testWeight(unittest.TestCase):
 class testLayer(unittest.TestCase):
 
     def setUp(self):
-        self.unread_a = dgeann.LayerGene(5, False, False, 0, "askl",
-                                            ["stairs"], 3, "IP")
+        self.unread_a = lg(5, False, False, 0, "askl", ["stairs"], 3, "IP")
         
     def test_makestring(self):
         dgeann.random.seed("genetic")
-        data = dgeann.LayerGene(5, False, False, 0, "data", [], 9, "input")
+        data = lg(5, False, False, 0, "data", [], 9, "input")
         test_data = dedent("""\
                             input: \"data\"
                             input_shape: {
@@ -119,8 +110,7 @@ class testLayer(unittest.TestCase):
                             }
                             """)
         self.assertEqual(test_data, data.read_out({}, {}))
-        action = dgeann.LayerGene(5, False, False, 0, "action",
-                                  ["data", "STM"], 6, "IP")
+        action = lg(5, False, False, 0, "action", ["data", "STM"], 6, "IP")
         test_action = dedent('''\
                     layer {
                       name: "CEKMKT"
@@ -157,24 +147,18 @@ class testLayer(unittest.TestCase):
         
     def test_read(self):
         active_list = {"cake": 5, "onion": 7}
-        unread_b = dgeann.LayerGene(5, False, False, 0, "askl",
-                                            ["cake", "onion", "strata"], 3, "IP")
-        low_dom_a = dgeann.LayerGene(1, False, False, 0, "abcd",
-                                             ["cake"], 4, "IP")
-        low_dom_b = dgeann.LayerGene(1, False, False, 0, "efgh",
-                                             ["cake"], 1, "IP")
-        high_dom = dgeann.LayerGene(5, False, False, 0, "ijkl",
-                                            ["cake"], 2, "IP")
-        other_layer = dgeann.LayerGene(3, False, False, 0, "mnop",
-                                              ["onion"], 3, "IP")
-        multiple_layer = dgeann.LayerGene(3, False, False, 0, "qrst",
-                                                  ["cake", "onion"], 3, "IP")
-        no_inputs = dgeann.LayerGene(3, False, False, 0, "uvwx",
-                                             [], 3, "input")
-        stm_input = dgeann.LayerGene(5, False, False, 0, "stm_input",
-                                             ["data", "reward"], 6, "input")
-        stm = dgeann.LayerGene(5, False, False, 0, "STM",
-                                       ["stm_input"], 6, "STMlayer")
+        unread_b = lg(5, False, False, 0, "askl", ["cake", "onion", "strata"],
+                      3, "IP")
+        low_dom_a = lg(1, False, False, 0, "abcd", ["cake"], 4, "IP")
+        low_dom_b = lg(1, False, False, 0, "efgh", ["cake"], 1, "IP")
+        high_dom = lg(5, False, False, 0, "ijkl", ["cake"], 2, "IP")
+        other_layer = lg(3, False, False, 0, "mnop", ["onion"], 3, "IP")
+        multiple_layer = lg(3, False, False, 0, "qrst", ["cake", "onion"],
+                            3, "IP")
+        no_inputs = lg(3, False, False, 0, "uvwx", [], 3, "input")
+        stm_input = lg(5, False, False, 0, "stm_input", ["data", "reward"],
+                       6, "input")
+        stm = lg(5, False, False, 0, "STM", ["stm_input"], 6, "STMlayer")
         dgeann.random.seed("layers")
         concat_dict = {}
         #a case where neither is read
@@ -196,7 +180,7 @@ class testLayer(unittest.TestCase):
         test_f = low_dom_b.read(active_list, high_dom, {}, {})
         self.assertEqual(test_f, high_dom)
         #a case with null other gene (and two dependencies)
-        null = dgeann.LayerGene(0, False, False, 0, "null", [], None, None)
+        null = lg(0, False, False, 0, "null", [], None, None)
         test_g = multiple_layer.read(active_list, null, {}, {})
         self.assertEqual(test_g, multiple_layer)
         #a case with no other gene (and no dependencies)
@@ -207,16 +191,11 @@ class testLayer(unittest.TestCase):
         self.assertEqual(test_i, no_inputs)
         
     def test_mutate(self):
-        mut_rate = dgeann.LayerGene(3, True, False, .9, "askl",
-                                            [], 3, "input")
-        mut_dom = dgeann.LayerGene(3, True, False, 1.0, "askl",
-                                          [], 3, "input")
-        mut_num = dgeann.LayerGene(3, True, False, 1.0, "askl",
-                                           [], 5, "input")
-        mut_dup = dgeann.LayerGene(3, True, True, 1.0, "askl",
-                                            [], 5, "input")
-        mut_add_input = dgeann.LayerGene(3, True, False, 1.0, "askl",
-                                                [], 5, "")
+        mut_rate = lg(3, True, False, .9, "askl", [], 3, "input")
+        mut_dom = lg(3, True, False, 1.0, "askl", [], 3, "input")
+        mut_num = lg(3, True, False, 1.0, "askl", [], 5, "input")
+        mut_dup = lg(3, True, True, 1.0, "askl", [], 5, "input")
+        mut_add_input = lg(3, True, False, 1.0, "askl", [], 5, "")
         dgeann.random.seed("vigor")
         test_mut_off = self.unread_a.mutate()
         self.assertEqual(test_mut_off, "")
@@ -248,46 +227,35 @@ class testBuild(unittest.TestCase):
 
     def setUp(self):
         self.active_list = {"data": 8, "concat_0": 5}
-        unread_a = dgeann.WeightGene(1, False, False, 0, "asld",
-                                             0.00, 0, 0, "nonexistant", "none")
-        unread_b = dgeann.WeightGene(1, False, False, 0, "asld",
-                                             0.00, 0, 0, "testa", "testb")
-        low_dom_a = dgeann.WeightGene(1, False, False, 0, "abcd",
-                                             0.00, 0, 0, "data", "action")
-        low_dom_b = dgeann.WeightGene(1, False, False, 0, "lowdb",
-                                             5.00, 0, 0, "data", "action")
-        low_dom_c = dgeann.WeightGene(1, False, False, 0, "jklm",
-                                             7.00, 0, 1, "data", "action")
-        low_dom_d = dgeann.WeightGene(1, False, False, 0, "lowdd",
-                                             1.00, 4, 0, "data", "action")
-        high_dom = dgeann.WeightGene(5, False, False, 0, "xyz",
-                                             3.00, 4, 0, "data", "action")
-        other_weight = dgeann.WeightGene(5, False, False, 0, "other",
-                                             3.00, 4, 4, "data", "action")
+        unread_a = wg(1, False, False, 0, "asld", 0.00, 0, 0, "N", "n")
+        unread_b = wg(1, False, False, 0, "asld",  0.00, 0, 0, "A", "B")
+        low_dom_a = wg(1, False, False, 0, "abcd",  0.00, 0, 0,
+                       "data", "action")
+        low_dom_b = wg(1, False, False, 0, "lowdb",  5.00, 0, 0,
+                       "data", "action")
+        low_dom_c = wg(1, False, False, 0, "jklm", 7.00, 0, 1, "data", "action")
+        low_dom_d = wg(1, False, False, 0, "lowdd", 1.00, 4, 0,
+                       "data", "action")
+        high_dom = wg(5, False, False, 0, "xyz", 3.00, 4, 0, "data", "action")
+        other_weight = wg(5, False, False, 0, "other", 3.00, 4, 4,
+                          "data", "action")
         #case where neither read, both read (same gene)
         #a is read first, low_dom_d and high_dom both read
         #other_weight is left to read on b
         alist = [unread_a, low_dom_a, low_dom_c, high_dom]
         blist = [unread_b, low_dom_b, low_dom_d, other_weight]
 
-        self.l_unread_a = dgeann.LayerGene(5, False, False, 0, "askl",
-                                            ["stairs"], 3, "IP")
-        l_unread_b = dgeann.LayerGene(5, False, False, 0, "askl",
-                                            ["cake", "onion", "strata"], 3, "IP")
-        self.l_low_dom_a = dgeann.LayerGene(1, False, False, 0, "data",
-                                             [], 8, "input")
-        self.l_low_dom_b = dgeann.LayerGene(1, False, False, 0, "efgh",
-                                             [], 5, "input")
-        self.l_low_dom_c = dgeann.LayerGene(1, False, False, 0, "qrst",
-                                          [], 4, "input")
-        l_low_dom_d = dgeann.LayerGene(1, False, False, 0, "uvwx",
-                                          [], 5, "input")
-        self.l_high_dom = dgeann.LayerGene(5, False, False, 0, "ijkl",
-                                            [], 2, "input")
-        self.l_dummy_layer = dgeann.LayerGene(5, False, False, 0, "blegh",
-                                            [], 5, "input")
-        l_action_layer = dgeann.LayerGene(3, False, False, 0, "action",
-                                              ["data", "blegh"], 5, "IP")
+        self.l_unread_a = lg(5, False, False, 0, "askl", ["stairs"], 3, "IP")
+        l_unread_b = lg(5, False, False, 0, "askl",
+                        ["cake", "onion", "strata"], 3, "IP")
+        self.l_low_dom_a = lg(1, False, False, 0, "data", [], 8, "input")
+        self.l_low_dom_b = lg(1, False, False, 0, "efgh", [], 5, "input")
+        self.l_low_dom_c = lg(1, False, False, 0, "qrst", [], 4, "input")
+        l_low_dom_d = lg(1, False, False, 0, "uvwx", [], 5, "input")
+        self.l_high_dom = lg(5, False, False, 0, "ijkl", [], 2, "input")
+        self.l_dummy_layer = lg(5, False, False, 0, "blegh", [], 5, "input")
+        l_action_layer = lg(3, False, False, 0, "action",
+                            ["data", "blegh"], 5, "IP")
         #case where neither read, both readable(rng set to read a)
         #a can be read, b can be read,
         #a has dom, a is longer by three genes
@@ -297,20 +265,16 @@ class testBuild(unittest.TestCase):
                  l_low_dom_d, self.l_low_dom_b]
         
         self.test_genome_a = dgeann.Genome(clist, dlist, alist, blist)
-        self.data = dgeann.LayerGene(5, False, False, 0, "data",
-                                        [], 9, "input")
-        self.reward = dgeann.LayerGene(5, False, False, 0, "reward",
-                                         [], 6, "input")
-        self.stm_input = dgeann.LayerGene(5, False, False, 0, "stm_input",
-                                             ["data", "reward"], 6, "input")
-        self.stm = dgeann.LayerGene(5, False, False, 0, "STM",
-                                       ["stm_input"], 6, "STMlayer")
-        self.concat = dgeann.LayerGene(5, False, False, 0, "concat_0",
-                                          ["data", "STM"], None, "concat")
-        self.action = dgeann.LayerGene(5, False, False, 0, "action",
-                                          ["concat_0"], 6, "IP")
-        self.loss = dgeann.LayerGene(5, False, False, 0, "loss",
-                                        ["action", "reward"], 6, "loss")
+        self.data = lg(5, False, False, 0, "data", [], 9, "input")
+        self.reward = lg(5, False, False, 0, "reward", [], 6, "input")
+        self.stm_input = lg(5, False, False, 0, "stm_input",
+                            ["data", "reward"], 6, "input")
+        self.stm = lg(5, False, False, 0, "STM", ["stm_input"], 6, "STMlayer")
+        self.concat = lg(5, False, False, 0, "concat_0",
+                         ["data", "STM"], None, "concat")
+        self.action = lg(5, False, False, 0, "action", ["concat_0"], 6, "IP")
+        self.loss = lg(5, False, False, 0, "loss",
+                       ["action", "reward"], 6, "loss")
 
     def test_net_ident(self):
         dgeann.random.seed("genetic")
@@ -321,8 +285,7 @@ class testBuild(unittest.TestCase):
         self.l_unread_a.inputs = []
         self.l_unread_a.layer_type = 'input'
         #layers_equalize
-        null = dgeann.LayerGene(3, False, False, 0, "null", [],
-                                 None, None)
+        null = lg(3, False, False, 0, "null", [], None, None)
         #case where both genomes are the same length
         g1 = dgeann.Genome([self.l_unread_a, self.l_low_dom_a,
                             self.l_dummy_layer],
@@ -344,8 +307,7 @@ class testBuild(unittest.TestCase):
             
     def test_layers_equalize_unequal(self):
         #case where chr a has an extra gene
-        null = dgeann.LayerGene(3, False, False, 0, "null", [],
-                                 None, None)
+        null = lg(3, False, False, 0, "null", [], None, None)
         g2 = dgeann.Genome([self.l_unread_a, self.l_low_dom_a,
                             self.l_low_dom_b, self.l_dummy_layer],
                            [self.l_unread_a, self.l_high_dom,
@@ -422,19 +384,13 @@ class testBuild(unittest.TestCase):
                              g5_test.layerchr_b[i].ident)
             
     def test_layers_equalize_IPlayers(self):
-        null = dgeann.LayerGene(3, False, False, 0, "null", [],
-                                 None, None)
+        null = lg(3, False, False, 0, "null", [], None, None)
         #case where chromosomes are equal, but with IP layers
-        IPG = dgeann.LayerGene(5, False, False, 0, "G",
-                                ["askl"], 2, "IP")
-        IPH = dgeann.LayerGene(5, False, False, 0, "H",
-                                ["askl"], 2, "IP")
-        IPI = dgeann.LayerGene(5, False, False, 0, "I",
-                                ["G"], 2, "IP")
-        IPJ = dgeann.LayerGene(5, False, False, 0, "J",
-                                ["H"], 2, "IP")
-        IPK = dgeann.LayerGene(5, False, False, 0, "I",
-                                ["G", "H"], 2, "IP")
+        IPG = lg(5, False, False, 0, "G", ["askl"], 2, "IP")
+        IPH = lg(5, False, False, 0, "H", ["askl"], 2, "IP")
+        IPI = lg(5, False, False, 0, "I", ["G"], 2, "IP")
+        IPJ = lg(5, False, False, 0, "J", ["H"], 2, "IP")
+        IPK = lg(5, False, False, 0, "I", ["G", "H"], 2, "IP")
         g6 = dgeann.Genome([self.l_unread_a, IPG, IPI],
                             [self.l_unread_a, IPH, IPJ], [], [])
         g6.layers_equalize()
@@ -451,8 +407,7 @@ class testBuild(unittest.TestCase):
             self.assertEqual(g7.layerchr_b[i].ident, g7_test_b[i].ident)
             
     def test_structure_network(self):
-        null = dgeann.LayerGene(3, False, False, 0, "null", [],
-                                 None, None)
+        null = lg(3, False, False, 0, "null", [], None, None)
         g1 = dgeann.Genome([self.l_unread_a, self.l_low_dom_a,
                             self.l_dummy_layer],
                            [self.l_unread_a, self.l_high_dom,
@@ -478,17 +433,12 @@ class testBuild(unittest.TestCase):
                             self.l_low_dom_b, self.l_low_dom_a,
                             self.l_high_dom, self.l_dummy_layer], [], [])
         g5.layers_equalize()
-        IPG = dgeann.LayerGene(5, False, False, 0, "G",
-                                ["askl"], 2, "IP")
-        IPH = dgeann.LayerGene(5, False, False, 0, "H",
-                                ["askl"], 2, "IP")
-        IPI = dgeann.LayerGene(5, False, False, 0, "I",
-                                ["G"], 2, "IP")
-        IPJ = dgeann.LayerGene(5, False, False, 0, "J",
-                                ["H"], 2, "IP")
-        IPK = dgeann.LayerGene(5, False, False, 0, "K",
-                                ["G", "H"], 2, "IP")
-        askl = dgeann.LayerGene(1, False, False, 0, "askl", [], 2, "data")
+        IPG = lg(5, False, False, 0, "G", ["askl"], 2, "IP")
+        IPH = lg(5, False, False, 0, "H", ["askl"], 2, "IP")
+        IPI = lg(5, False, False, 0, "I", ["G"], 2, "IP")
+        IPJ = lg(5, False, False, 0, "J", ["H"], 2, "IP")
+        IPK = lg(5, False, False, 0, "K", ["G", "H"], 2, "IP")
+        askl = lg(1, False, False, 0, "askl", [], 2, "data")
         g6 = dgeann.Genome([askl, IPG, IPI],
                             [askl, IPH, IPJ], [], [])
         g7 = dgeann.Genome([askl, IPG, IPH, IPK],
@@ -535,17 +485,12 @@ class testBuild(unittest.TestCase):
         self.assertEqual(g6_layout[2].inputs, ["G"])
 
     def test_build_layers_text(self):
-        askl = dgeann.LayerGene(1, False, False, 0, "askl", [], 3, "input")
-        IPG = dgeann.LayerGene(5, False, False, 0, "G",
-                                ["askl"], 2, "IP")
-        IPH = dgeann.LayerGene(5, False, False, 0, "H",
-                                ["askl"], 2, "IP")
-        IPI = dgeann.LayerGene(5, False, False, 0, "I",
-                                ["G"], 2, "IP")
-        IPJ = dgeann.LayerGene(5, False, False, 0, "J",
-                                ["H"], 2, "IP")
-        IPK = dgeann.LayerGene(5, False, False, 0, "I",
-                                ["G", "H"], 2, "IP")
+        askl = lg(1, False, False, 0, "askl", [], 3, "input")
+        IPG = lg(5, False, False, 0, "G", ["askl"], 2, "IP")
+        IPH = lg(5, False, False, 0, "H", ["askl"], 2, "IP")
+        IPI = lg(5, False, False, 0, "I", ["G"], 2, "IP")
+        IPJ = lg(5, False, False, 0, "J", ["H"], 2, "IP")
+        IPK = lg(5, False, False, 0, "I", ["G", "H"], 2, "IP")
         g6 = dgeann.Genome([askl, IPG, IPI],
                             [askl, IPH, IPJ], [], [])
         g7 = dgeann.Genome([askl, IPG, IPH, IPK],
@@ -693,22 +638,14 @@ class testBuild(unittest.TestCase):
         #case based on chopped-down real example
         #should compare null against can't-be-read ("P" when "M" is not read)
         dgeann.random.seed("evo|devo")
-        d = dgeann.LayerGene(5, False, False, 0, "d",
-                                [], 1, "input")
-        V = dgeann.LayerGene(3, False, False, 0, "V",
-                                ["d"], 1, "IP")
-        M = dgeann.LayerGene(3, False, False, 0, "M",
-                                ["d"], 1, "IP")
-        P = dgeann.LayerGene(3, False, False, 0, "P",
-                                ["d", "M"], 1, "IP")
-        ip1 = dgeann.LayerGene(3, False, False, 0, "IP",
-                                ["d", "M", "P"], 1, "IP")
-        out1 = dgeann.LayerGene(3, False, False, 0, "out",
-                                ["IP", "V"], 1, "IP")
-        ip2 = dgeann.LayerGene(3, False, False, 0, "IP",
-                                ["d"], 1, "IP")
-        out2 = dgeann.LayerGene(3, False, False, 0, "out",
-                                ["IP"], 1, "IP")
+        d = lg(5, False, False, 0, "d", [], 1, "input")
+        V = lg(3, False, False, 0, "V", ["d"], 1, "IP")
+        M = lg(3, False, False, 0, "M", ["d"], 1, "IP")
+        P = lg(3, False, False, 0, "P", ["d", "M"], 1, "IP")
+        ip1 = lg(3, False, False, 0, "IP", ["d", "M", "P"], 1, "IP")
+        out1 = lg(3, False, False, 0, "out", ["IP", "V"], 1, "IP")
+        ip2 = lg(3, False, False, 0, "IP", ["d"], 1, "IP")
+        out2 = lg(3, False, False, 0, "out", ["IP"], 1, "IP")
         g8 = dgeann.Genome([d, V, M, P, ip1, out1], [d, ip2, out2], [], [],
                            ["out"])
         g8_list, g8_concats, g8_sub = g8.build_layers({}, "g8.txt", {})
@@ -716,13 +653,13 @@ class testBuild(unittest.TestCase):
         os.remove('g8.txt')
 
     def test_adjust_weights(self):
-        testa = dgeann.WeightGene(1, False, False, 0.0, "a", -0.06807647, 0, 0,
-                                   "data", "action")
-        testb = dgeann.WeightGene(1, False, False, 0.0, "a", -0.08293831, 0, 1,
-                                   "data", "action")
-        testc = dgeann.WeightGene(1, False, False, 0.0, "a", -0.3910988, 0, 2,
-                                   "data", "action")
-        act = dgeann.LayerGene(5, False, False, 0, "action", ["data"], 3, "IP")
+        testa = wg(1, False, False, 0.0, "a", -0.06807647, 0, 0,
+                   "data", "action")
+        testb = wg(1, False, False, 0.0, "a", -0.08293831, 0, 1,
+                   "data", "action")
+        testc = wg(1, False, False, 0.0, "a", -0.3910988, 0, 2,
+                   "data", "action")
+        act = lg(5, False, False, 0, "action", ["data"], 3, "IP")
         gen = dgeann.Genome([self.data, act], [self.data, act],
                             [testa, testb, testc], [testa, testb, testc])
         solv = gen.build()   
@@ -745,7 +682,7 @@ class testBuild(unittest.TestCase):
                               -0.3910988)
 
     def test_read_through(self):
-        act = dgeann.LayerGene(5, False, False, 0, "action", ["data"], 5, "IP")
+        act = lg(5, False, False, 0, "action", ["data"], 5, "IP")
         gen = dgeann.Genome([self.data, act], [self.data, act], [], [])
         solv = gen.build()
         net = solv.net
@@ -768,14 +705,10 @@ class testBuild(unittest.TestCase):
         self.assertEqual(a.ident, "xyz")
 
     def test_concats(self):
-        a_u_00 = dgeann.WeightGene(5, False, False, 0, "au00",
-                                      3.00, 0, 0, "INa", "IPu")
-        a_o_00 = dgeann.WeightGene(5, False, False, 0, "ao00",
-                                      3.00, 0, 0, "INa", "IPo")
-        i_u_00 = dgeann.WeightGene(5, False, False, 0, "iu00",
-                                      5.00, 0, 0, "INi", "IPu")
-        i_o_00 = dgeann.WeightGene(5, False, False, 0, "io00",
-                                      5.00, 0, 0, "INi", "IPo")
+        a_u_00 = wg(5, False, False, 0, "au00",  3.00, 0, 0, "INa", "IPu")
+        a_o_00 = wg(5, False, False, 0, "ao00", 3.00, 0, 0, "INa", "IPo")
+        i_u_00 = wg(5, False, False, 0, "iu00", 5.00, 0, 0, "INi", "IPu")
+        i_o_00 = wg(5, False, False, 0, "io00", 5.00, 0, 0, "INi", "IPo")
         weight_list = [a_u_00, a_o_00, i_u_00, i_o_00]
         concat_genome = dgeann.Genome([], [], weight_list, weight_list)
         active_list = {"INa": 5, "INi": 5, "concat": 10, "IPu": 5, "IPo": 5}
@@ -788,10 +721,8 @@ class testBuild(unittest.TestCase):
             self.assertEqual(cwa[i].alt_in, results[i])
             self.assertEqual(cwb[i].alt_in, results[i])
         #test with two inputs
-        e_u_00 = dgeann.WeightGene(5, False, False, 0, "ie00",
-                                      3.00, 0, 0, "INe", "IPu")
-        e_o_00 = dgeann.WeightGene(5, False, False, 0, "ie00",
-                                      3.00, 0, 0, "INe", "IPo")
+        e_u_00 = wg(5, False, False, 0, "ie00", 3.00, 0, 0, "INe", "IPu")
+        e_o_00 = wg(5, False, False, 0, "ie00", 3.00, 0, 0, "INe", "IPo")
         weight_list2 = [a_u_00, a_o_00, i_u_00, i_o_00, e_u_00, e_o_00]
         for weight in weight_list2:
             weight.alt_in = weight.in_node
@@ -808,50 +739,42 @@ class testBuild(unittest.TestCase):
             self.assertEqual(cwb[i].alt_in, results[i])
         
     def test_build_weights(self):
-        act = dgeann.LayerGene(5, False, False, 0, "action", ["data"], 5, "IP")
+        act = lg(5, False, False, 0, "action", ["data"], 5, "IP")
         gen = dgeann.Genome([self.data, act], [self.data, act], [], [])
         solv = gen.build()
         net = solv.net
         data = net.params["action"][0].data
         active_list = {"data": 8, "action": 5}
         #simple test
-        zz_genea = dgeann.WeightGene(1, False, False, 0, "zzga",
-                                             1.00, 0, 0, "data", "action")
-        zz_geneb = dgeann.WeightGene(1, False, False, 0, "zzgb",
-                                             5.00, 0, 0, "data", "action")
-        zo_genea = dgeann.WeightGene(1, False, False, 0, "abcd",
-                                             1.00, 0, 1, "data", "action")
-        zo_geneb = dgeann.WeightGene(1, False, False, 0, "abcd",
-                                             5.00, 0, 1, "data", "action")
+        zz_genea = wg(1, False, False, 0, "zzga", 1.00, 0, 0, "data", "action")
+        zz_geneb = wg(1, False, False, 0, "zzgb", 5.00, 0, 0, "data", "action")
+        zo_genea = wg(1, False, False, 0, "abcd", 1.00, 0, 1, "data", "action")
+        zo_geneb = wg(1, False, False, 0, "abcd", 5.00, 0, 1, "data", "action")
         genome_a = dgeann.Genome([], [], [zz_genea, zo_genea], [zz_geneb,
-                                                                    zo_geneb])
+                                                                zo_geneb])
         genome_a.build_weights(active_list, net, {})
         self.assertAlmostEqual(data[0][0], 3.00)
         self.assertAlmostEqual(data[1][0], 3.00)
         #test where a is one longer
-        zt_genea = dgeann.WeightGene(1, False, False, 0, "abcd",
-                                        1.00, 0, 2, "data", "action")
+        zt_genea = wg(1, False, False, 0, "abcd", 1.00, 0, 2, "data", "action")
         genome_b = dgeann.Genome([], [], [zz_genea, zo_genea, zt_genea],
                     [zz_geneb, zo_geneb])
         genome_b.build_weights(active_list, net, {})
         self.assertAlmostEqual(data[2][0], 1.00)
         #test where b is one longer
-        zt_geneb = dgeann.WeightGene(1, False, False, 0, "abcd",
-                                        5.00, 0, 2, "data", "action")
+        zt_geneb = wg(1, False, False, 0, "abcd", 5.00, 0, 2, "data", "action")
         genome_c = dgeann.Genome([], [], [zz_genea, zo_genea],
                     [zz_geneb, zo_geneb, zt_geneb])
         genome_c.build_weights(active_list, net, {})
         self.assertAlmostEqual(data[2][0], 5.00)
         #test where a pulls ahead
-        oz_genea = dgeann.WeightGene(1, False, False, 0, "efgh",
-                                        1.00, 1, 0, "data", "action")
+        oz_genea = wg(1, False, False, 0, "efgh", 1.00, 1, 0, "data", "action")
         genome_d = dgeann.Genome([], [], [zz_genea, oz_genea],
                                    [zz_geneb, zo_geneb])
         genome_d.build_weights(active_list, net, {})
         self.assertAlmostEqual(data[0][1], 1.00)
         #test where b pulls ahead
-        oz_geneb = dgeann.WeightGene(1, False, False, 0, "ijkl",
-                                        5.00, 1, 0, "data", "action")
+        oz_geneb = wg(1, False, False, 0, "ijkl", 5.00, 1, 0, "data", "action")
         genome_e = dgeann.Genome([], [], [zz_genea, zo_genea],
                                    [zz_geneb, oz_geneb])
         genome_e.build_weights(active_list, net, {})
@@ -870,26 +793,21 @@ class testBuild(unittest.TestCase):
         data[0][0] = 7.00
         ###TODO Note to self: add one that doesn't have a 0/0 - h, i
         #test where a goes to 0/0 while b is still going
-        ff_genea = dgeann.WeightGene(1, False, False, 0, "ffga",
-                                        1.00, 5, 4, "data", "action")
-        ff_geneb = dgeann.WeightGene(1, False, False, 0, "ffgb",
-                                        5.00, 5, 4, "data", "action")
-        sz_geneb = dgeann.WeightGene(1, False, False, 0, "szgb",
-                                        5.00, 6, 0, "data", "action")
-        so_geneb = dgeann.WeightGene(1, False, False, 0, "sogb",
-                                        5.00, 6, 1, "data", "action")
+        ff_genea = wg(1, False, False, 0, "ffga", 1.00, 5, 4, "data", "action")
+        ff_geneb = wg(1, False, False, 0, "ffgb", 5.00, 5, 4, "data", "action")
+        sz_geneb = wg(1, False, False, 0, "szgb", 5.00, 6, 0, "data", "action")
+        so_geneb = wg(1, False, False, 0, "sogb", 5.00, 6, 1, "data", "action")
         genome_j = dgeann.Genome([], [], [ff_genea, zz_genea],
                                    [ff_geneb, sz_geneb, so_geneb, zz_geneb])
         genome_j.build_weights(active_list, net, {})
         self.assertAlmostEqual(data[0][0], 3.00)
         #test where b goes to 0/0 while a is still going
         data[0][0] = 7.00
-        sz_genea = dgeann.WeightGene(1, False, False, 0, "szga",
-                                        1.00, 6, 0, "data", "action")
-        so_genea = dgeann.WeightGene(1, False, False, 0, "szga",
-                                        1.00, 6, 1, "data", "action")
-        genome_l = dgeann.Genome([], [], [ff_genea, sz_genea, so_genea, zz_genea],
-                                   [ff_geneb, zz_geneb])
+        sz_genea = wg(1, False, False, 0, "szga", 1.00, 6, 0, "data", "action")
+        so_genea = wg(1, False, False, 0, "szga", 1.00, 6, 1, "data", "action")
+        genome_l = dgeann.Genome([], [], [ff_genea, sz_genea, so_genea,
+                                          zz_genea],
+                                         [ff_geneb, zz_geneb])
         genome_l.build_weights(active_list, net, {})
         self.assertAlmostEqual(data[0][0], 3.00)
    
@@ -904,23 +822,15 @@ class testBuild(unittest.TestCase):
         self.assertAlmostEqual(data[0][4], 3.00)
         self.assertAlmostEqual(data[4][4], 3.00)
         #test concats
-        layer_a = dgeann.LayerGene(5, False, False, 0, "INa",
-                                        [], 5, "input")
-        layer_i = dgeann.LayerGene(5, False, False, 0, "INi",
-                                        [], 5, "input")
-        layer_u = dgeann.LayerGene(5, False, False, 0, "IPu",
-                                        ["INa", "INi"], 5, "IP")
-        layer_o = dgeann.LayerGene(5, False, False, 0, "IPo",
-                                        ["INa", "INi"], 5, "IP")
+        layer_a = lg(5, False, False, 0, "INa", [], 5, "input")
+        layer_i = lg(5, False, False, 0, "INi", [], 5, "input")
+        layer_u = lg(5, False, False, 0, "IPu", ["INa", "INi"], 5, "IP")
+        layer_o = lg(5, False, False, 0, "IPo", ["INa", "INi"], 5, "IP")
         layer_list = [layer_a, layer_i, layer_u, layer_o]
-        a_u_00 = dgeann.WeightGene(5, False, False, 0, "au00",
-                                      3.00, 0, 0, "INa", "IPu")
-        a_o_00 = dgeann.WeightGene(5, False, False, 0, "ao00",
-                                      3.00, 0, 0, "INa", "IPo")
-        i_u_00 = dgeann.WeightGene(5, False, False, 0, "iu00",
-                                      5.00, 0, 0, "INi", "IPu")
-        i_o_00 = dgeann.WeightGene(5, False, False, 0, "io00",
-                                      5.00, 0, 0, "INi", "IPo")
+        a_u_00 = wg(5, False, False, 0, "au00", 3.00, 0, 0, "INa", "IPu")
+        a_o_00 = wg(5, False, False, 0, "ao00", 3.00, 0, 0, "INa", "IPo")
+        i_u_00 = wg(5, False, False, 0, "iu00", 5.00, 0, 0, "INi", "IPu")
+        i_o_00 = wg(5, False, False, 0, "io00", 5.00, 0, 0, "INi", "IPo")
         weight_list = [a_u_00, a_o_00, i_u_00, i_o_00]
         concat_genome = dgeann.Genome(layer_list, layer_list, weight_list,
                                         weight_list)
@@ -934,30 +844,26 @@ class testBuild(unittest.TestCase):
         self.assertAlmostEqual(data_o[0][0], 3.00)
         self.assertAlmostEqual(data_o[0][5], 5.00)
         #test that subbing layers works correctly
-        test_subs = dgeann.Genome([dgeann.LayerGene(1, False, False,
-                                                     0, "A", [], 2, "input"),
-                                   dgeann.LayerGene(5, False, False,
-                                                     0, "C", ["A"], 2, "IP")],
-                                  [dgeann.LayerGene(5, False, False,
-                                                     0, "B", [], 1, "input"),
-                                   dgeann.LayerGene(1, False, False,
-                                                     0, "D", ["B"], 2, "IP")],
-                                  [dgeann.WeightGene(3, False, False, 0, "a",
-                                                      3.0, 0, 0, "A", "C"),
-                                   dgeann.WeightGene(3, False, False, 0, "b",
-                                                      3.0, 0, 1, "A", "C"),
-                                   dgeann.WeightGene(3, False, False, 0, "c",
-                                                      3.0, 1, 0, "A", "C"),
-                                   dgeann.WeightGene(3, False, False, 0, "d",
-                                                      3.0, 1, 1, "A", "C")],
-                                  [dgeann.WeightGene(3, False, False, 0, "e",
-                                                      1.0, 0, 0, "B", "D"),
-                                   dgeann.WeightGene(3, False, False, 0, "f",
-                                                      1.0, 0, 1, "B", "D"),
-                                   dgeann.WeightGene(3, False, False, 0, "g",
-                                                      1.0, 1, 0, "B", "D"),
-                                   dgeann.WeightGene(3, False, False, 0, "h",
-                                                      1.0, 1, 1, "B", "D")])
+        test_subs = dgeann.Genome([lg(1, False, False, 0, "A", [], 2, "input"),
+                                   lg(5, False, False, 0, "C", ["A"], 2, "IP")],
+                                  [lg(5, False, False, 0, "B", [], 1, "input"),
+                                   lg(1, False, False, 0, "D", ["B"], 2, "IP")],
+                                  [wg(3, False, False, 0, "a", 3.0, 0, 0,
+                                      "A", "C"),
+                                   wg(3, False, False, 0, "b", 3.0, 0, 1,
+                                      "A", "C"),
+                                   wg(3, False, False, 0, "c", 3.0, 1, 0,
+                                      "A", "C"),
+                                   wg(3, False, False, 0, "d", 3.0, 1, 1,
+                                      "A", "C")],
+                                  [wg(3, False, False, 0, "e", 1.0, 0, 0,
+                                      "B", "D"),
+                                   wg(3, False, False, 0, "f", 1.0, 0, 1,
+                                      "B", "D"),
+                                   wg(3, False, False, 0, "g", 1.0, 1, 0,
+                                      "B", "D"),
+                                   wg(3, False, False, 0, "h", 1.0, 1, 1,
+                                      "B", "D")])
         subs = test_subs.build()
         self.assertEqual(len(subs.net.params["C"][0].data[0]), 1)
         self.assertEqual(subs.net.params["C"][0].data[0][0], 3.0)
@@ -971,8 +877,8 @@ class testRandGenes(unittest.TestCase):
         dgeann.random.seed("vigor")
 
     def test_create_rweights(self):
-        lay = [dgeann.LayerGene(1, False, False, 0, "a", [], 2, "input"),
-               dgeann.LayerGene(1, False, False, 0, "h", ["a"], 2, "IP")]
+        lay = [lg(1, False, False, 0, "a", [], 2, "input"),
+               lg(1, False, False, 0, "h", ["a"], 2, "IP")]
         #simple case
         simp_genome = dgeann.Genome(lay, lay, [], [])
         net = simp_genome.build().net
@@ -998,13 +904,12 @@ class testRandGenes(unittest.TestCase):
 
     def test_concat_rweights(self):
         #concats case
-        layers = [dgeann.LayerGene(1, False, False, 0, "i", [], 1, "input"),
-          dgeann.LayerGene(1, False, False, 0, "a", ["i"], 2, "IP"),
-          dgeann.LayerGene(1, False, False, 0, "b", ["i"], 2, "IP"),
-          dgeann.LayerGene(1, False, False, 0, "c", ["i"], 2, "IP"),
-          dgeann.LayerGene(1, False, False, 0, "d", ["i"], 2, "IP"),
-          dgeann.LayerGene(1, False, False, 0, "h",
-                           ["a", "b", "c", "d"], 2, "IP")]
+        layers = [lg(1, False, False, 0, "i", [], 1, "input"),
+          lg(1, False, False, 0, "a", ["i"], 2, "IP"),
+          lg(1, False, False, 0, "b", ["i"], 2, "IP"),
+          lg(1, False, False, 0, "c", ["i"], 2, "IP"),
+          lg(1, False, False, 0, "d", ["i"], 2, "IP"),
+          lg(1, False, False, 0, "h", ["a", "b", "c", "d"], 2, "IP")]
         concats_genome = dgeann.Genome(layers, layers, [], [])
         key = "h"
         concat_dict = {"ZPKRMC": [["a", "b", "c", "d"], [2, 2, 2, 2], ["h"]]}
@@ -1037,29 +942,26 @@ class testMutation(unittest.TestCase):
         self.assertEqual(ident, "QXLPYG")
 
     def test_new_input(self):
-        test_layer_b = dgeann.LayerGene(4, True, True, .01, "INa",
-                                        [], 5, "IP")
-        test_dup_layer = dgeann.LayerGene(4, True, True, .01, "ABCDEF",
-                                             [], 5, "IP")
-        test_genome = dgeann.Genome([test_dup_layer, test_layer_b], [test_layer_b],
-                                      [],[])
-        x = test_genome.new_input(test_genome.layerchr_a[0], test_genome.layerchr_a)
+        test_layer_b = lg(4, True, True, .01, "INa", [], 5, "IP")
+        test_dup_layer = lg(4, True, True, .01, "ABCDEF", [], 5, "IP")
+        test_genome = dgeann.Genome([test_dup_layer, test_layer_b],
+                                    [test_layer_b], [],[])
+        x = test_genome.new_input(test_genome.layerchr_a[0],
+                                  test_genome.layerchr_a)
         self.assertEqual(x.ident, "INa")
         #test with multiple possible layers
-        test_layer_c = dgeann.LayerGene(4, True, True, .01, "INi",
-                                        [], 5, "IP")
-        test_layer_d = dgeann.LayerGene(4, True, True, .01, "INu",
-                                        [], 5, "IP")
-        test_genome_b = dgeann.Genome([test_layer_b, test_layer_c, test_layer_d],
-                                        [test_dup_layer, test_layer_b,
-                                         test_layer_c, test_layer_d], [], [])
+        test_layer_c = lg(4, True, True, .01, "INi", [], 5, "IP")
+        test_layer_d = lg(4, True, True, .01, "INu", [], 5, "IP")
+        test_genome_b = dgeann.Genome([test_layer_b, test_layer_c,
+                                       test_layer_d],
+                                      [test_dup_layer, test_layer_b,
+                                       test_layer_c, test_layer_d], [], [])
         x = test_genome_b.new_input(test_genome_b.layerchr_b[0],
                                     test_genome_b.layerchr_b)
         
         self.assertEqual("INi", x.ident)
         #test with concats and loss layer at end
-        test_loss_layer = dgeann.LayerGene(4, True, True, .01, "loss",
-                                            [], 5, "loss")
+        test_loss_layer = lg(4, True, True, .01, "loss", [], 5, "loss")
         test_genome_c = dgeann.Genome([test_layer_b,  test_loss_layer],
                                         [test_dup_layer, test_layer_b, 
                                          test_loss_layer], [], [])
@@ -1069,16 +971,15 @@ class testMutation(unittest.TestCase):
 
     def test_find_n_inputs(self):
         #single input
-        test_in = dgeann.LayerGene(1, False, False, 0, "IN", [], 5, "data")
-        test_out = dgeann.LayerGene(1, False, False, 0, "OUT", ["IN"], 5, "IP")
+        test_in = lg(1, False, False, 0, "IN", [], 5, "data")
+        test_out = lg(1, False, False, 0, "OUT", ["IN"], 5, "IP")
         genome = dgeann.Genome([test_in, test_out], [], [], [])
         n, d = genome.find_n_inputs(test_out, genome.layerchr_a)
         self.assertEqual(n, 5)
         self.assertEqual({"IN": 5}, d)
         #concat input
-        test_in2 = dgeann.LayerGene(1, False, False, 0, "IN2", [], 5, "data")
-        test_out = dgeann.LayerGene(1, False, False, 0, "OUT", ["IN", "IN2"],
-                                     5, "IP")
+        test_in2 = lg(1, False, False, 0, "IN2", [], 5, "data")
+        test_out = lg(1, False, False, 0, "OUT", ["IN", "IN2"], 5, "IP")
         genome2 = dgeann.Genome([test_in, test_in2, test_out], [], [], [])
         n, d = genome.find_n_inputs(test_out, genome2.layerchr_a)
         self.assertEqual(n, 10)
@@ -1086,14 +987,13 @@ class testMutation(unittest.TestCase):
 
     def test_dup_weights(self):
         #simplest test case
-        test_in = dgeann.LayerGene(4, False, False, 0, "IN", [], 1, "data")
-        test_layer_b = dgeann.LayerGene(4, True, True, .01, "OUT",
-                                        ["ABCDEF"], 5, "IP")
-        test_dup_layer = dgeann.LayerGene(4, True, True, .01, "ABCDEF",
-                                             ["IN"], 5, "IP")
+        test_in = lg(4, False, False, 0, "IN", [], 1, "data")
+        test_layer_b = lg(4, True, True, .01, "OUT", ["ABCDEF"], 5, "IP")
+        test_dup_layer = lg(4, True, True, .01, "ABCDEF", ["IN"], 5, "IP")
         test_genome = dgeann.Genome([test_in, test_dup_layer, test_layer_b], [],
                                       [], [])
-        test_genome.dup_weights(test_dup_layer, test_layer_b, test_genome.layerchr_a)
+        test_genome.dup_weights(test_dup_layer, test_layer_b,
+                                test_genome.layerchr_a)
         self.assertEqual(len(test_genome.weightchr_a), 30)
         n = 0
         m = 0
@@ -1117,9 +1017,8 @@ class testMutation(unittest.TestCase):
                     m += 1
 
     def test_handle_duplication(self):
-        test_input = dgeann.LayerGene(4, False, False, 0, "d", [], 1, "data")
-        test_layer_b = dgeann.LayerGene(4, True, True, .01, "INa",
-                                        ["d"], 5, "IP")
+        test_input = lg(4, False, False, 0, "d", [], 1, "data")
+        test_layer_b = lg(4, True, True, .01, "INa", ["d"], 5, "IP")
         test_genome = dgeann.Genome([test_input, test_layer_b], [],
                                       [], [])
         test_genome.handle_duplication(test_layer_b, test_genome.layerchr_a)
@@ -1147,37 +1046,33 @@ class testMutation(unittest.TestCase):
 
     def test_find_outputs(self):
         #simple case
-        test_in = dgeann.LayerGene(5, False, False, 0, "d", [], 1, "data")
-        test_gene = dgeann.LayerGene(5, True, True, .017, "tester", ["d"], 5, "IP")
+        test_in = lg(5, False, False, 0, "d", [], 1, "data")
+        test_gene = lg(5, True, True, .017, "tester", ["d"], 5, "IP")
         test_genome = dgeann.Genome([test_in, test_gene], [], [], [])
         out = test_genome.find_outputs(test_in, test_genome.layerchr_a)
         self.assertEqual(out, [test_gene])
         #case with 3 outputs across two concats
-        conc1 = dgeann.LayerGene(5, False, False, 0, "con1", ["tester"],
-                                    None, "concat")
-        conc2 = dgeann.LayerGene(5, False, False, 0, "con2", ["tester", "d"],
-                                    None, "concat")
-        out1 = dgeann.LayerGene(5, True, True, .017, "out1", ["con1"], 5, "IP")
-        out2 = dgeann.LayerGene(5, True, True, .017, "out2", ["con2"], 3, "IP")
-        out3 = dgeann.LayerGene(5, True, True, .017, "out3", ["con2"], 6, "IP")
+        conc1 = lg(5, False, False, 0, "con1", ["tester"], None, "concat")
+        conc2 = lg(5, False, False, 0, "con2", ["tester", "d"], None, "concat")
+        out1 = lg(5, True, True, .017, "out1", ["con1"], 5, "IP")
+        out2 = lg(5, True, True, .017, "out2", ["con2"], 3, "IP")
+        out3 = lg(5, True, True, .017, "out3", ["con2"], 6, "IP")
         test_genome2 = dgeann.Genome([test_in, test_gene, conc1, conc2, out1,
                                         out2, out3], [], [], [])
         out = test_genome2.find_outputs(test_gene, test_genome2.layerchr_a)
         self.assertEqual(out, [out1, out2, out3])
 
     def test_add_nodes(self):
-        test_in = dgeann.LayerGene(5, False, False, 0, "d", [], 1, "data")
-        test_gene = dgeann.LayerGene(5, True, True, .01, "tester", ["d"], 5, "IP")
-        test_out = dgeann.LayerGene(5, False, False, 0, "o", ["tester"], 3, "IP")
+        test_in = lg(5, False, False, 0, "d", [], 1, "data")
+        test_gene = lg(5, True, True, .01, "tester", ["d"], 5, "IP")
+        test_out = lg(5, False, False, 0, "o", ["tester"], 3, "IP")
         weights = []
         for i in range(5):
-            w = dgeann.WeightGene(5, True, False, .01, str(i), 3, 0, i, "d",
-                                     "tester")
+            w = wg(5, True, False, .01, str(i), 3, 0, i, "d", "tester")
             weights.append(w)
         for i in range(5):
             for j in range (3):
-                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
-                                         i, j, "tester", "o")
+                w = wg(5, True, False, .01, str(i), 3, i, j, "tester", "o")
                 weights.append(w)
         test_genome = dgeann.Genome([test_in, test_gene, test_out], [],
                                       weights, [])
@@ -1203,36 +1098,32 @@ class testMutation(unittest.TestCase):
                 m = 0
                 n += 1
         #more complicated version: 3 outputs on 2 concats, weights on both chrs
-        out1 = dgeann.LayerGene(5, True, True, .017, "out1", ["tester"], 5, "IP")
-        out2 = dgeann.LayerGene(5, True, True, .017, "out2", ["tester", "d"], 3, "IP")
-        out3 = dgeann.LayerGene(5, True, True, .017, "out3", ["tester", "d"], 6, "IP")
+        out1 = lg(5, True, True, .017, "out1", ["tester"], 5, "IP")
+        out2 = lg(5, True, True, .017, "out2", ["tester", "d"], 3, "IP")
+        out3 = lg(5, True, True, .017, "out3", ["tester", "d"], 6, "IP")
         test_gene.nodes = 3
         weights = []
         compare_weights = []
         for i in range(4):
-            w = dgeann.WeightGene(5, True, False, .01, str(i), 3, 0, i, "d",
-                                     "tester")
+            w = wg(5, True, False, .01, str(i), 3, 0, i, "d", "tester")
             if i < 3:
                 weights.append(w)
             compare_weights.append(w)
         for i in range(4):
             for j in range(5):
-                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
-                                         i, j, "tester", "out1")
+                w = wg(5, True, False, .01, str(i), 3, i, j, "tester", "out1")
                 if i < 3:
                     weights.append(w)
                 compare_weights.append(w)
         for i in range(4):
             for j in range (3):
-                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
-                                         i, j, "tester", "out2")
+                w = wg(5, True, False, .01, str(i), 3, i, j, "tester", "out2")
                 if i < 3:
                     weights.append(w)
                 compare_weights.append(w)
         for i in range(4):
             for j in range (6):
-                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
-                                         i, j, "tester", "out3")
+                w = wg(5, True, False, .01, str(i), 3, i, j, "tester", "out3")
                 if i < 3:
                     weights.append(w)
                 compare_weights.append(w)
@@ -1288,23 +1179,19 @@ class testMutation(unittest.TestCase):
         self.assertEqual(len(test_genome2.weightchr_b), 75)
         compare_weights = []
         for i in range(5):
-            w = dgeann.WeightGene(5, True, False, .01, str(i), 3, 0, i, "d",
-                                     "tester")
+            w = wg(5, True, False, .01, str(i), 3, 0, i, "d", "tester")
             compare_weights.append(w)
         for i in range(5):
             for j in range(5):
-                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
-                                         i, j, "tester", "out1")
+                w = wg(5, True, False, .01, str(i), 3, i, j, "tester", "out1")
                 compare_weights.append(w)
         for i in range(5):
             for j in range (3):
-                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
-                                         i, j, "tester", "out2")
+                w = wg(5, True, False, .01, str(i), 3, i, j, "tester", "out2")
                 compare_weights.append(w)
         for i in range(5):
             for j in range (6):
-                w = dgeann.WeightGene(5, True, False, .01, str(i), 3,
-                                         i, j, "tester", "out3")
+                w = wg(5, True, False, .01, str(i), 3, i, j, "tester", "out3")
                 compare_weights.append(w)
         for i in range(len(compare_weights)):
             self.assertEqual(compare_weights[i].in_node,
@@ -1317,14 +1204,11 @@ class testMutation(unittest.TestCase):
                              test_genome2.weightchr_b[i].out_node)    
         
     def test_handle_mutation(self):
-        test_weight_a = dgeann.WeightGene(5, True, False, 0, "au00",
-                                      3.00, 0, 0, "INa", "IPu")
-        test_weight_b = dgeann.WeightGene(4, True, False, 1.0, "au00",
-                                      3.00, 0, 0, "INa", "IPu")
-        test_layer_a = dgeann.LayerGene(5, True, False, 0, "INa",
-                                        [], 5, "input")
-        test_layer_b = dgeann.LayerGene(4, True, True, .01, "INa",
-                                        [], 5, "IP")
+        test_weight_a = wg(5, True, False, 0, "au00", 3.00, 0, 0, "INa", "IPu")
+        test_weight_b = wg(4, True, False, 1.0, "au00", 3.00, 0, 0,
+                           "INa", "IPu")
+        test_layer_a = lg(5, True, False, 0, "INa", [], 5, "input")
+        test_layer_b = lg(4, True, True, .01, "INa", [], 5, "IP")
         test_genome = dgeann.Genome([test_layer_a], [test_layer_b],
                                       [test_weight_a], [test_weight_b])
         test_genome.handle_mutation("Dom, 1", test_weight_a, "a")
@@ -1360,8 +1244,8 @@ class testMutation(unittest.TestCase):
         test_genome.handle_mutation("Dom, 1", test_layer_b, "b")
         self.assertEqual(test_layer_b.dom, 5)
         #test duplication
-        test_in = dgeann.LayerGene(5, False, False, 0, "d", [], 1, "data")
-        test_dupl = dgeann.LayerGene(5, True, True, .017, "TEST", ["d"], 5, "IP")
+        test_in = lg(5, False, False, 0, "d", [], 1, "data")
+        test_dupl = lg(5, True, True, .017, "TEST", ["d"], 5, "IP")
         test_dup = dgeann.Genome([], [test_in, test_dupl], [], [])
         test_dup.handle_mutation("Duplicate,", test_dup.layerchr_b[1], "b",
                                  test_dup.layerchr_b)
@@ -1388,13 +1272,11 @@ class testMutation(unittest.TestCase):
         self.assertEqual(len(test_dup.weightchr_b), 36)
         #more complicated case where different numbers of weights are needed
         #for different layers
-        test_dup.layerchr_b.append(dgeann.LayerGene(5, False, False, 3,
-                                                       "TEST2", ["QXLPYG"], 1,
-                                                       "IP"))
+        test_dup.layerchr_b.append(lg(5, False, False, 3, "TEST2",
+                                      ["QXLPYG"], 1, "IP"))
         for i in range(7):
-            test_dup.weightchr_b.append(dgeann.WeightGene(5, True, True, .01,
-                                                             str(i), 3, i, 0,
-                                                             "QXLPYG", "TEST2"))
+            test_dup.weightchr_b.append(wg(5, True, True, .01, str(i), 3, i,
+                                           0, "QXLPYG", "TEST2"))
         test_dup.handle_mutation("Nodes, 2", test_dup.layerchr_b[1], "b",
                                 test_dup.layerchr_b)
         self.assertEqual(test_dup.layerchr_b[1].nodes, 8)
@@ -1402,18 +1284,12 @@ class testMutation(unittest.TestCase):
         
     def test_mutate(self):
         dgeann.random.seed("genetic1")
-        wgene_0 = dgeann.WeightGene(5, True, False, 1.0, "au00",
-                                      3.00, 0, 0, "INa", "IPu")
-        wgene_1 = dgeann.WeightGene(5, True, False, 1.0, "au00",
-                                      3.00, 0, 0, "INa", "IPu")
-        wgene_2 = dgeann.WeightGene(5, True, False, .066, "au00",
-                                      3.00, 0, 0, "INa", "IPu")
-        wgene_3 = dgeann.WeightGene(5, False, False, 1.0, "au00",
-                                      3.00, 0, 0, "INa", "IPu")
-        wgene_4 = dgeann.WeightGene(5, True, False, 1.0, "au04",
-                                      3.00, 0, 0, "INa", "IPu")
-        wgene_5 = dgeann.WeightGene(5, True, False, 1.0, "au05",
-                                      3.00, 0, 0, "INa", "IPu")
+        wgene_0 = wg(5, True, False, 1.0, "au00", 3.00, 0, 0, "INa", "IPu")
+        wgene_1 = wg(5, True, False, 1.0, "au00", 3.00, 0, 0, "INa", "IPu")
+        wgene_2 = wg(5, True, False, .066, "au00", 3.00, 0, 0, "INa", "IPu")
+        wgene_3 = wg(5, False, False, 1.0, "au00", 3.00, 0, 0, "INa", "IPu")
+        wgene_4 = wg(5, True, False, 1.0, "au04", 3.00, 0, 0, "INa", "IPu")
+        wgene_5 = wg(5, True, False, 1.0, "au05", 3.00, 0, 0, "INa", "IPu")
         test_genome = dgeann.Genome([],[], [wgene_0, wgene_1, wgene_2],
                                       [wgene_3, wgene_4, wgene_5])
         test_genome.mutate()
@@ -1435,47 +1311,31 @@ class testRecombination(unittest.TestCase):
     def setUp(self):
         dgeann.random.seed("genetic")
         #simple case
-        layer_a = dgeann.LayerGene(5, False, False, 0, "INa",
-                                        [], 5, "input")
-        layer_i = dgeann.LayerGene(5, False, False, 0, "INi",
-                                        [], 5, "input")
-        layer_concat = dgeann.LayerGene(5, False, False, 0, "concat",
-                                        ["INa", "INi"], None, "concat")
-        layer_u = dgeann.LayerGene(5, False, False, 0, "IPu",
-                                        ["concat"], 5, "IP")
-        layer_o = dgeann.LayerGene(5, False, False, 0, "IPo",
-                                        ["concat"], 5, "IP")
+        layer_a = lg(5, False, False, 0, "INa", [], 5, "input")
+        layer_i = lg(5, False, False, 0, "INi", [], 5, "input")
+        layer_concat = lg(5, False, False, 0, "concat",
+                          ["INa", "INi"], None, "concat")
+        layer_u = lg(5, False, False, 0, "IPu", ["concat"], 5, "IP")
+        layer_o = lg(5, False, False, 0, "IPo", ["concat"], 5, "IP")
         layer_list_a = [layer_a, layer_i, layer_concat, layer_u, layer_o]
-        layer_a2 = dgeann.LayerGene(5, False, False, 0, "INa",
-                                        [], 7, "input")
-        layer_o2 = dgeann.LayerGene(5, False, False, 0, "IPo",
-                                        ["concat"], 7, "IP")
+        layer_a2 = lg(5, False, False, 0, "INa", [], 7, "input")
+        layer_o2 = lg(5, False, False, 0, "IPo", ["concat"], 7, "IP")
         layer_list_b = [layer_a2, layer_i, layer_concat, layer_u, layer_o2]
-        a_u_00 = dgeann.WeightGene(5, False, False, 0, "au00",
-                                      3.00, 0, 0, "INa", "IPu")
-        a_o_00 = dgeann.WeightGene(5, False, False, 0, "ao00",
-                                      3.00, 0, 0, "INa", "IPo")
-        i_u_00 = dgeann.WeightGene(5, False, False, 0, "iu00",
-                                      5.00, 0, 0, "INi", "IPu")
-        i_o_00 = dgeann.WeightGene(5, False, False, 0, "io00",
-                                      5.00, 0, 0, "INi", "IPo")
+        a_u_00 = wg(5, False, False, 0, "au00", 3.00, 0, 0, "INa", "IPu")
+        a_o_00 = wg(5, False, False, 0, "ao00", 3.00, 0, 0, "INa", "IPo")
+        i_u_00 = wg(5, False, False, 0, "iu00", 5.00, 0, 0, "INi", "IPu")
+        i_o_00 = wg(5, False, False, 0, "io00", 5.00, 0, 0, "INi", "IPo")
         weight_list_a = [a_u_00, a_o_00, i_u_00, i_o_00]
-        a_u = dgeann.WeightGene(5, False, False, 0, "au00",
-                                     7.00, 0, 0, "INa", "IPu")
-        i_o = dgeann.WeightGene(5, False, False, 0, "io00",
-                                      7.00, 0, 0, "INi", "IPo")
+        a_u = wg(5, False, False, 0, "au00", 7.00, 0, 0, "INa", "IPu")
+        i_o = wg(5, False, False, 0, "io00", 7.00, 0, 0, "INi", "IPo")
         weight_list_b = [a_u, a_o_00, i_u_00, i_o]
         self.genome_a = dgeann.Genome(layer_list_a, layer_list_b,
                                    weight_list_a, weight_list_b)
         #a case with more complicated weight genetics (extras in front) 
-        a_u_01 = dgeann.WeightGene(5, False, False, 0, "au01",
-                                      3.00, 0, 1, "INa", "IPu")
-        a_u_02 = dgeann.WeightGene(5, False, False, 0, "au02",
-                                      3.00, 0, 2, "INa", "IPu")
-        a_u_03 = dgeann.WeightGene(5, False, False, 0, "au03",
-                                      3.00, 0, 3, "INa", "IPu")
-        a_o_01 = dgeann.WeightGene(5, False, False, 0, "ao01",
-                                      3.00, 0, 3, "INa", "IPo")
+        a_u_01 = wg(5, False, False, 0, "au01", 3.00, 0, 1, "INa", "IPu")
+        a_u_02 = wg(5, False, False, 0, "au02", 3.00, 0, 2, "INa", "IPu")
+        a_u_03 = wg(5, False, False, 0, "au03", 3.00, 0, 3, "INa", "IPu")
+        a_o_01 = wg(5, False, False, 0, "ao01", 3.00, 0, 3, "INa", "IPo")
         weight_list_c = [a_u_00, a_u_01, a_u_02, a_u_03, a_o_00, a_o_01, i_u_00,
                          i_o_00]
         weight_list_d = [a_u_00, a_u_01, a_o_00, a_o_01, i_u_00, i_o_00]
@@ -1486,13 +1346,11 @@ class testRecombination(unittest.TestCase):
                                         weight_list_c)
         #case where the extras are on the end
         #and one strand gets an extra layer
-        i_o_01 = dgeann.WeightGene(5, False, False, 0, "io00",
-                                      5.00, 0, 1, "INi", "IPo")
-        i_o_02 = dgeann.WeightGene(5, False, False, 0, "io00",
-                                      5.00, 0, 2, "INi", "IPo")
-        layer_e = dgeann.LayerGene(5, False, False, 0, "IPe",
-                                        ["concat"], 5, "IP")
-        layer_list_c = [layer_a, layer_i, layer_concat, layer_u, layer_o, layer_e]
+        i_o_01 = wg(5, False, False, 0, "io00", 5.00, 0, 1, "INi", "IPo")
+        i_o_02 = wg(5, False, False, 0, "io00", 5.00, 0, 2, "INi", "IPo")
+        layer_e = lg(5, False, False, 0, "IPe", ["concat"], 5, "IP")
+        layer_list_c = [layer_a, layer_i, layer_concat, layer_u,
+                        layer_o, layer_e]
         weight_list_e = [a_u_00, a_u_01, a_o_00, a_o_01, i_u_00, i_o_00, i_o_01,
                          i_o_02]
         self.genome_d = dgeann.Genome(layer_list_c, layer_list_b, weight_list_e,
@@ -1500,10 +1358,8 @@ class testRecombination(unittest.TestCase):
         self.genome_e = dgeann.Genome(layer_list_a, layer_list_c, weight_list_d,
                                         weight_list_e)
         #case where the extras are in the middle
-        i_u_01 = dgeann.WeightGene(5, False, False, 0, "iu01",
-                                      5.00, 0, 1, "INi", "IPu")
-        i_u_02 = dgeann.WeightGene(5, False, False, 0, "iu02",
-                                      5.00, 0, 2, "INi", "IPu")
+        i_u_01 = wg(5, False, False, 0, "iu01", 5.00, 0, 1, "INi", "IPu")
+        i_u_02 = wg(5, False, False, 0, "iu02", 5.00, 0, 2, "INi", "IPu")
         weight_list_f = [a_u_00, a_u_01, a_o_00, a_o_01, i_u_00, i_u_01, i_u_02,
                          i_o_00]
         self.genome_f = dgeann.Genome(layer_list_a, layer_list_b, weight_list_f,
@@ -1511,10 +1367,8 @@ class testRecombination(unittest.TestCase):
         self.genome_g = dgeann.Genome(layer_list_a, layer_list_b, weight_list_d,
                                         weight_list_f)
         #case where the extras are for a different layer, at end
-        other_0 = dgeann.WeightGene(5, False, False, 0, "asdl",
-                                      5.00, 0, 0, "asdl", "jkl;")
-        other_1 = dgeann.WeightGene(5, False, False, 0, "jkl;",
-                                      5.00, 0, 1, "asdl", "jkl;")
+        other_0 = wg(5, False, False, 0, "asdl", 5.00, 0, 0, "asdl", "jkl;")
+        other_1 = wg(5, False, False, 0, "jkl;", 5.00, 0, 1, "asdl", "jkl;")
         weight_list_g = [a_u_00, a_u_01, a_o_00, a_o_01, i_u_00, i_o_00,
                          other_0, other_1]
         self.genome_h = dgeann.Genome(layer_list_a, layer_list_b, weight_list_g,
@@ -1523,13 +1377,11 @@ class testRecombination(unittest.TestCase):
                                         weight_list_g)
         #case where the extras are for a different layer (both chromosomes)
         #and there's non-matching extra as the end of the layer chromosomes
-        other_2 = dgeann.WeightGene(5, False, False, 0, "zxcv",
-                                      5.00, 0, 0, "zxcv", "bnm,")
-        other_3 = dgeann.WeightGene(5, False, False, 0, "bnm,",
-                                      5.00, 0, 1, "zxcv", "bnm,")
-        layer_ka = dgeann.LayerGene(5, False, False, 0, "INka",
-                                        [], 5, "input")
-        layer_list_d = [layer_a, layer_i, layer_concat, layer_u, layer_o, layer_ka]
+        other_2 = wg(5, False, False, 0, "zxcv", 5.00, 0, 0, "zxcv", "bnm,")
+        other_3 = wg(5, False, False, 0, "bnm,", 5.00, 0, 1, "zxcv", "bnm,")
+        layer_ka = lg(5, False, False, 0, "INka",[], 5, "input")
+        layer_list_d = [layer_a, layer_i, layer_concat, layer_u, layer_o,
+                        layer_ka]
         weight_list_i = [a_u_00, a_u_01, a_o_00, a_o_01, i_u_00, i_o_00,
                          other_2, other_3]
         self.genome_j = dgeann.Genome(layer_list_c, layer_list_d, weight_list_i,
@@ -1644,16 +1496,12 @@ class testHaploid(unittest.TestCase):
 
     def test_recomb(self):
         dgeann.random.seed("genetic")
-        layer_a = dgeann.LayerGene(5, False, False, 0, "A", [], 1, "input")
-        layer_b = dgeann.LayerGene(5, False, False, 0, "B", [], 1, "input")
-        layer_c = dgeann.LayerGene(5, False, False, 0, "C", ["A", "B"],
-                                   1, "IP")
-        layer_d = dgeann.LayerGene(5, False, False, 0, "D", ["A", "B"],
-                                   1, "IP")
-        weight_a = dgeann.WeightGene(5, False, False, 0, "a", 3.00, 0, 0,
-                                     "A", "C")
-        weight_b = dgeann.WeightGene(5, False, False, 0, "b", 3.00, 0, 0,
-                                     "B", "D")
+        layer_a = lg(5, False, False, 0, "A", [], 1, "input")
+        layer_b = lg(5, False, False, 0, "B", [], 1, "input")
+        layer_c = lg(5, False, False, 0, "C", ["A", "B"], 1, "IP")
+        layer_d = lg(5, False, False, 0, "D", ["A", "B"], 1, "IP")
+        weight_a = wg(5, False, False, 0, "a", 3.00, 0, 0, "A", "C")
+        weight_b = wg(5, False, False, 0, "b", 3.00, 0, 0, "B", "D")
         haploid_a = dgeann.HaploidGenome([layer_a, layer_b, layer_c],
                                          [weight_a])
         haploid_b = dgeann.HaploidGenome([layer_b, layer_b, layer_d],
@@ -1668,12 +1516,10 @@ class testHaploid(unittest.TestCase):
 
     def test_build(self):
         dgeann.random.seed("genetic")
-        layer_a = dgeann.LayerGene(5, False, False, 0, "A", [], 1, "input")
-        layer_b = dgeann.LayerGene(5, False, False, 0, "B", [], 1, "input")
-        layer_c = dgeann.LayerGene(5, False, False, 0, "C", ["A", "B"],
-                                   1, "IP")
-        weight_a = dgeann.WeightGene(5, False, False, 0, "a", 3.00, 0, 0,
-                                     "A", "C")
+        layer_a = lg(5, False, False, 0, "A", [], 1, "input")
+        layer_b = lg(5, False, False, 0, "B", [], 1, "input")
+        layer_c = lg(5, False, False, 0, "C", ["A", "B"], 1, "IP")
+        weight_a = wg(5, False, False, 0, "a", 3.00, 0, 0, "A", "C")
         haploid_a = dgeann.HaploidGenome([layer_a, layer_b, layer_c],
                                          [weight_a])
         hapa = haploid_a.build()
