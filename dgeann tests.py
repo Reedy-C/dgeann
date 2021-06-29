@@ -843,6 +843,8 @@ class testBuild(unittest.TestCase):
         self.assertAlmostEqual(data_u[0][5], 5.00)
         self.assertAlmostEqual(data_o[0][0], 3.00)
         self.assertAlmostEqual(data_o[0][5], 5.00)
+
+    def test_build_subs(self):
         #test that subbing layers works correctly
         test_subs = dgeann.Genome([lg(1, False, False, 0, "A", [], 2, "input"),
                                    lg(5, False, False, 0, "C", ["A"], 2, "IP")],
@@ -1076,7 +1078,6 @@ class testMutation(unittest.TestCase):
                 weights.append(w)
         test_genome = dgeann.Genome([test_in, test_gene, test_out], [],
                                       weights, [])
-        
         n_in, d = test_genome.find_n_inputs(test_gene, test_genome.layerchr_a)
         test_genome.add_nodes(test_gene, test_genome.layerchr_a, 2,
                               test_genome.weightchr_a, n_in)
@@ -1097,11 +1098,15 @@ class testMutation(unittest.TestCase):
             if m > 2:
                 m = 0
                 n += 1
+
+    def test_add_nodes_complicated(self):
         #more complicated version: 3 outputs on 2 concats, weights on both chrs
         out1 = lg(5, True, True, .017, "out1", ["tester"], 5, "IP")
         out2 = lg(5, True, True, .017, "out2", ["tester", "d"], 3, "IP")
         out3 = lg(5, True, True, .017, "out3", ["tester", "d"], 6, "IP")
-        test_gene.nodes = 3
+        test_gene = lg(5, True, True, .01, "tester", ["d"], 3, "IP")
+        test_in = lg(5, False, False, 0, "d", [], 1, "data")
+        test_out = lg(5, False, False, 0, "o", ["tester"], 3, "IP")
         weights = []
         compare_weights = []
         for i in range(4):
@@ -1127,6 +1132,8 @@ class testMutation(unittest.TestCase):
                 if i < 3:
                     weights.append(w)
                 compare_weights.append(w)
+        test_genome = dgeann.Genome([test_in, test_gene, test_out], [],
+                                      weights, [])
         test_genome2 = dgeann.Genome([test_in, test_gene, out1, out2, out3],
                                      [], weights, weights)
         n_in, d = test_genome.find_n_inputs(test_gene, test_genome.layerchr_a)
@@ -1203,7 +1210,7 @@ class testMutation(unittest.TestCase):
             self.assertEqual(compare_weights[i].out_node,
                              test_genome2.weightchr_b[i].out_node)    
         
-    def test_handle_mutation(self):
+    def test_handle_mutation_weights(self):
         test_weight_a = wg(5, True, False, 0, "au00", 3.00, 0, 0, "INa", "IPu")
         test_weight_b = wg(4, True, False, 1.0, "au00", 3.00, 0, 0,
                            "INa", "IPu")
@@ -1229,8 +1236,15 @@ class testMutation(unittest.TestCase):
         self.assertEqual(test_weight_b.mut_rate, 1.0)
         test_genome.handle_mutation("Rate, -1", test_weight_b, "b")
         self.assertEqual(test_weight_b.mut_rate, 0)
-        #TODO not all layer mutations are going to be implemented yet
-        #but these ones are
+
+    def test_handle_mutation_layers(self):
+        test_weight_a = wg(5, True, False, 0, "au00", 3.00, 0, 0, "INa", "IPu")
+        test_weight_b = wg(4, True, False, 1.0, "au00", 3.00, 0, 0,
+                           "INa", "IPu")
+        test_layer_a = lg(5, True, False, 0, "INa", [], 5, "input")
+        test_layer_b = lg(4, True, True, .01, "INa", [], 5, "IP")
+        test_genome = dgeann.Genome([test_layer_a], [test_layer_b],
+                                      [test_weight_a], [test_weight_b])
         test_genome.handle_mutation("Rate, -1", test_layer_a, "a")
         self.assertEqual(test_layer_a.mut_rate, 0)
         test_genome.handle_mutation("Rate, 1", test_layer_a, "a")
