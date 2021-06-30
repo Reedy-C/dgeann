@@ -256,7 +256,7 @@ class Genome(object):
         """
         #first, generate a new ID for the network
         self.ident = network_ident()
-        if not os.path.exists('Gen files'):
+        if not os.path.exists('Gen files'): # pragma: no cover
             os.makedirs('Gen files')
         ident_file = os.path.join('Gen files', self.ident + '.gen')
         #then build network structure
@@ -648,10 +648,7 @@ class Genome(object):
 
         d: weight array of the output layer.
         """
-        if len(net.blobs[in_layer].data.shape) == 4:
-            limit = net.blobs[in_layer].data.shape[3]
-        else:
-            limit = net.blobs[in_layer].data.shape[1]
+        limit = net.blobs[in_layer].data.shape[1]
         new_off = off
         #i is the input number/node
         for i in range(limit):
@@ -934,13 +931,13 @@ class Gene(object):
         self.ident = ident
 
     #defined in subclasses
-    def mutate(self):
+    def mutate(self): # pragma: no cover
         """Return if and how a gene mutates.
         """
-        pass
+        raise NotImplementedError
 
     #defined in subclasses
-    def read(self, active_list, other_gene, read_file):
+    def read(self, active_list, other_gene, read_file): # pragma: no cover
         """Return which of a pair of genes (or what median result)
         is used to create the final network.
 
@@ -948,7 +945,7 @@ class Gene(object):
         other_gene: equivalent gene on other chromosome.
         read_file: .gen file that is printed to, then read to make net.
         """
-        pass
+        raise NotImplementedError
         
     
 def gene_ident():
