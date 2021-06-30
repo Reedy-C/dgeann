@@ -78,20 +78,32 @@ class testWeight(unittest.TestCase):
         self.assertEqual(test_no_mut, "")
         #case where mut is on, roll lower than rate (dom changes)
         dgeann.random.seed("vigor")
-        dgeann.random.random()
-        dgeann.random.random()
-        dgeann.random.random()
+        for i in range(3):
+            dgeann.random.random()
         test_dom_mut = self.mut_dom.mutate()
         self.assertEqual(test_dom_mut, "Dom, 1")
         #case where weight changes
         test_weight_mut = self.mut_weight.mutate()
         self.assertEqual(test_weight_mut, "Weight, -0.05954510163836234")
         #case where rate changes
-        dgeann.random.random()
-        dgeann.random.random()
-        dgeann.random.random()
+        dgeann.random.seed("vigor")
+        for i in range(7):
+            dgeann.random.random()
         test_rate_mut = self.mut_rate.mutate()
-        self.assertEqual(test_rate_mut, "Rate, -0.000140099362110361")
+        self.assertEqual(test_rate_mut, "Rate, -0.000574045945432189")
+        #make sure clamping occurs
+        self.mut_dom.dom = 5
+        self.mut_dom.mut_rate = 1.0
+        dgeann.random.seed("vigor")
+        dgeann.weight_mut_probs = (0, 1, 0)
+        for i in range(0):
+            dgeann.random.random()
+        test_clamp_mut = self.mut_dom.mutate()
+        self.assertEqual(test_clamp_mut, "Dom, -1")
+        self.mut_rate.mut_rate = 1
+        dgeann.weight_mut_probs = (0, 0, 1)
+        test_clamp_rate = self.mut_rate.mutate()
+        self.assertEqual(test_clamp_rate, "Rate, -0.0004181538857107627")
 
 #tests that layer genes read and mutate properly
 class testLayer(unittest.TestCase):
@@ -189,10 +201,14 @@ class testLayer(unittest.TestCase):
         #a case where the other gene has no dependencies
         test_i = low_dom_a.read(active_list, no_inputs, {}, {})
         self.assertEqual(test_i, no_inputs)
+        #a case where other gene is already in active_list
+        active_list["abcd"] = 4
+        test_j = low_dom_b.read(active_list, low_dom_a, {}, {})
+        self.assertEqual(test_j, low_dom_b)
         
     def test_mutate(self):
         mut_rate = lg(3, True, False, .9, "askl", [], 3, "input")
-        mut_dom = lg(3, True, False, 1.0, "askl", [], 3, "input")
+        mut_dom = lg(3, True, False, 1.0, "askl2", [], 3, "input")
         mut_num = lg(3, True, False, 1.0, "askl", [], 5, "input")
         mut_dup = lg(3, True, True, 1.0, "askl", [], 5, "input")
         mut_add_input = lg(3, True, False, 1.0, "askl", [], 5, "")
@@ -219,7 +235,29 @@ class testLayer(unittest.TestCase):
         for i in range(7):
             dgeann.random.random()
         test_mut_input = mut_add_input.mutate()
-        self.assertEqual(test_mut_input, "Add input,")       
+        self.assertEqual(test_mut_input, "Add input,")
+        mut_dom.mut_rate = 0.01
+        test_mut_none = mut_dom.mutate()
+        self.assertEqual(test_mut_none, "")
+        mut_rate.mut_rate = 1
+        #making sure that results can't be out of bounds
+        dgeann.random.seed("vigor")
+        test_mut_clampedrate = mut_rate.mutate()
+        self.assertTrue(float(test_mut_clampedrate[6:]) < 0)
+        dgeann.random.seed("evodevo")
+        dgeann.random.random()
+        dgeann.random.random()
+        mut_num.nodes = 1
+        test_mut_clampednum = mut_num.mutate()
+        self.assertEqual(test_mut_clampednum, "Nodes, 1")
+        mut_dom.dom = 5
+        mut_dom.mut_rate = 1.0
+        dgeann.random.seed("vigor")
+        dgeann.random.random()
+        dgeann.random.random()
+        test_mut_clampeddom = mut_dom.mutate()
+        self.assertEqual(test_mut_clampeddom, "Dom, -1")
+        
 
 #tests that genome builds a new creature properly
 #along with tests for helper functions
@@ -1218,8 +1256,6 @@ class testMutation(unittest.TestCase):
         test_layer_b = lg(4, True, True, .01, "INa", [], 5, "IP")
         test_genome = dgeann.Genome([test_layer_a], [test_layer_b],
                                       [test_weight_a], [test_weight_b])
-        test_genome.handle_mutation("Dom, 1", test_weight_a, "a")
-        self.assertEqual(test_weight_a.dom, 5)
         test_genome.handle_mutation("Dom, -1", test_weight_a, "a")
         self.assertEqual(test_weight_a.dom, 4)
         test_genome.handle_mutation("Dom, 1", test_weight_b, "b")
@@ -1228,14 +1264,14 @@ class testMutation(unittest.TestCase):
         self.assertEqual(test_weight_a.weight, 6.00)
         test_genome.handle_mutation("Weight, -3.0", test_weight_b, "b")
         self.assertEqual(test_weight_b.weight, 0.00)
-        test_genome.handle_mutation("Rate, -1", test_weight_a, "a")
-        self.assertEqual(test_weight_a.mut_rate, 0)
         test_genome.handle_mutation("Rate, 1", test_weight_a, "a")
         self.assertEqual(test_weight_a.mut_rate, 1)
-        test_genome.handle_mutation("Rate, 1", test_weight_b, "b")
-        self.assertEqual(test_weight_b.mut_rate, 1.0)
+        test_genome.handle_mutation("Rate, -1", test_weight_a, "a")
+        self.assertEqual(test_weight_a.mut_rate, 0)
         test_genome.handle_mutation("Rate, -1", test_weight_b, "b")
         self.assertEqual(test_weight_b.mut_rate, 0)
+        test_genome.handle_mutation("Rate, 1", test_weight_b, "b")
+        self.assertEqual(test_weight_b.mut_rate, 1.0)
 
     def test_handle_mutation_layers(self):
         test_weight_a = wg(5, True, False, 0, "au00", 3.00, 0, 0, "INa", "IPu")
@@ -1245,14 +1281,12 @@ class testMutation(unittest.TestCase):
         test_layer_b = lg(4, True, True, .01, "INa", [], 5, "IP")
         test_genome = dgeann.Genome([test_layer_a], [test_layer_b],
                                       [test_weight_a], [test_weight_b])
-        test_genome.handle_mutation("Rate, -1", test_layer_a, "a")
-        self.assertEqual(test_layer_a.mut_rate, 0)
         test_genome.handle_mutation("Rate, 1", test_layer_a, "a")
         self.assertEqual(test_layer_a.mut_rate, 1)
+        test_genome.handle_mutation("Rate, -1", test_layer_a, "a")
+        self.assertEqual(test_layer_a.mut_rate, 0)
         test_genome.handle_mutation("Rate, -.001", test_layer_b, "b")
         self.assertAlmostEqual(test_layer_b.mut_rate, .009)
-        test_genome.handle_mutation("Dom, 1", test_layer_a, "a")
-        self.assertEqual(test_layer_a.dom, 5)
         test_genome.handle_mutation("Dom, -1", test_layer_a, "a")
         self.assertEqual(test_layer_a.dom, 4)
         test_genome.handle_mutation("Dom, 1", test_layer_b, "b")
@@ -1298,14 +1332,16 @@ class testMutation(unittest.TestCase):
         
     def test_mutate(self):
         dgeann.random.seed("genetic1")
+        lgene_0 = lg(1, True, False, 1, "a", [], 5, "IP")
         wgene_0 = wg(5, True, False, 1.0, "au00", 3.00, 0, 0, "INa", "IPu")
         wgene_1 = wg(5, True, False, 1.0, "au00", 3.00, 0, 0, "INa", "IPu")
         wgene_2 = wg(5, True, False, .066, "au00", 3.00, 0, 0, "INa", "IPu")
         wgene_3 = wg(5, False, False, 1.0, "au00", 3.00, 0, 0, "INa", "IPu")
         wgene_4 = wg(5, True, False, 1.0, "au04", 3.00, 0, 0, "INa", "IPu")
         wgene_5 = wg(5, True, False, 1.0, "au05", 3.00, 0, 0, "INa", "IPu")
-        test_genome = dgeann.Genome([],[], [wgene_0, wgene_1, wgene_2],
-                                      [wgene_3, wgene_4, wgene_5])
+        test_genome = dgeann.Genome([lgene_0], [lgene_0],
+                                    [wgene_0, wgene_1, wgene_2],
+                                    [wgene_3, wgene_4, wgene_5])
         test_genome.mutate()
         self.assertNotEqual(wgene_0.weight, 3.00)
         self.assertNotEqual(wgene_1.weight, 3.00)
@@ -1316,7 +1352,7 @@ class testMutation(unittest.TestCase):
         self.assertEqual(wgene_3.dom, 5)
         self.assertEqual(wgene_3.mut_rate, 1.0)
         self.assertNotEqual(wgene_4.weight, 3.00)
-        self.assertNotEqual(wgene_5.weight, 3.00)
+        self.assertNotEqual(wgene_5.dom, 5)
         
 
 #tests recombination and helper functions
@@ -1436,7 +1472,7 @@ class testRecombination(unittest.TestCase):
     def test_crossover(self):
         #simple test case
         cross_a = self.genome_a.crossover()
-        #will crossover at 3, 2
+        #will cross over at 3, 2
         self.assertEqual(cross_a.layerchr_a[4].nodes, 7)
         self.assertEqual(cross_a.layerchr_b[4].nodes, 5)
         self.assertEqual(cross_a.weightchr_a[3].weight, 7.00)
@@ -1474,6 +1510,15 @@ class testRecombination(unittest.TestCase):
         cross_h = self.genome_h.crossover()
         self.assertEqual(len(cross_h.weightchr_a), 6)
         self.assertEqual(len(cross_h.weightchr_b), 8)
+
+    def test_crossover_unconstrained(self):
+        dgeann.constrain_crossover = False
+        cross_a = self.genome_a.crossover()
+        #will cross over at 3, 2 again
+        self.assertEqual(cross_a.layerchr_a[4].nodes, 7)
+        self.assertEqual(cross_a.layerchr_b[4].nodes, 5)
+        self.assertEqual(cross_a.weightchr_a[3].weight, 7.00)
+        self.assertEqual(cross_a.weightchr_b[3].weight, 5.00)
         
     def test_recomb(self):
         recomb_a = self.genome_a.recombine(self.genome_a)
@@ -1493,13 +1538,31 @@ class testRecombination(unittest.TestCase):
         for x in range(len(recomb_a.weightchr_b)):
             self.assertEqual(recomb_a.weightchr_b[x].ident,
                              self.genome_a.weightchr_b[x].ident)
-        recomb_b = self.genome_a.recombine(self.genome_k)
-        self.assertEqual(len(recomb_b.layerchr_b), 6)
-        self.assertEqual(len(recomb_b.layerchr_a), 5)
-        self.assertEqual(len(recomb_b.weightchr_a), 4)
-        self.assertEqual(len(recomb_b.weightchr_b), 8)
-        for gene in recomb_b.weightchr_a:
-            for weight in recomb_b.weightchr_b:
+        #gets other if-branches
+        recomb_b = self.genome_a.recombine(self.genome_a)
+        x = 0
+        for x in range(len(recomb_b.layerchr_a)):
+            self.assertEqual(recomb_b.layerchr_a[x].ident,
+                             self.genome_a.layerchr_b[x].ident)
+        x = 0
+        for x in range(len(recomb_b.layerchr_b)):
+            self.assertEqual(recomb_b.layerchr_b[x].ident,
+                             self.genome_a.layerchr_a[x].ident)
+            x = 0
+        for x in range(len(recomb_b.weightchr_a)):
+            self.assertEqual(recomb_b.weightchr_a[x].ident,
+                             self.genome_a.weightchr_b[x].ident)
+            x = 0
+        for x in range(len(recomb_b.weightchr_b)):
+            self.assertEqual(recomb_b.weightchr_b[x].ident,
+                             self.genome_a.weightchr_a[x].ident)
+        recomb_c = self.genome_a.recombine(self.genome_k)
+        self.assertEqual(len(recomb_c.layerchr_b), 6)
+        self.assertEqual(len(recomb_c.layerchr_a), 5)
+        self.assertEqual(len(recomb_c.weightchr_a), 4)
+        self.assertEqual(len(recomb_c.weightchr_b), 8)
+        for gene in recomb_c.weightchr_a:
+            for weight in recomb_c.weightchr_b:
                 if gene.ident == weight.ident:
                     aru = True
             self.assertTrue(aru)

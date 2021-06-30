@@ -656,8 +656,8 @@ class Genome(object):
             for j in range(len(d)):
                 weight = d[j][i+off]
                 w_gene = WeightGene(random.randint(1, 5), True, False,
-                                     def_mut_rate, gene_ident(), weight,
-                                     i, j, in_layer, out_layer)
+                                    def_mut_rate, gene_ident(), weight,
+                                    i, j, in_layer, out_layer)
                 self.weightchr_a.append(w_gene)
                 w_gene.dom = random.randint(1, 5)
                 self.weightchr_b.append(w_gene)
@@ -694,23 +694,17 @@ class Genome(object):
         if record_muts:
             self.mut_record.append([c, gene.ident, result])
         val = result[(result.index(",") + 2)::]
+        #validation of this change is done at the mutate() function
         if result[0:3] == "Rat":
             val = float(val)
             gene.mut_rate += val
-            if gene.mut_rate > 1:
-                gene.mut_rate = 1
-            elif gene.mut_rate < 0:
-                gene.mut_rate = 0
         elif result[0:3] == "Wei":
             val = float(val)
             gene.weight += val
+        #validation of this change is done at the mutate() function
         elif result[0:3] == "Dom":
             val = int(val)
             gene.dom += val
-            if gene.dom > 5:
-                gene.dom = 5
-            elif gene.dom < 0:
-                gene.dom = 0
         elif result[0:3] == "Dup":
             self.handle_duplication(gene, chro)
         elif result[0:3] == "Nod":
@@ -781,8 +775,8 @@ class Genome(object):
                 for j in range(new_gene.nodes):
                     weight = random.gauss(0, var)
                     w = WeightGene(random.randint(1,5),
-                                    True, False, def_mut_rate, gene_ident(),
-                                    weight, i, j, layer, new_gene.ident)
+                                   True, False, def_mut_rate, gene_ident(),
+                                   weight, i, j, layer, new_gene.ident)
                     new_weights.append(w)
         #then from new gene -> the gene that now takes it as input
         var = 1/out_inputs
@@ -791,9 +785,9 @@ class Genome(object):
             for j in range(out_gene.nodes):
                 weight = random.gauss(0, var)
                 w = WeightGene(random.randint(1,5),
-                                True, False, def_mut_rate,
-                                gene_ident(), weight, i, j,
-                                new_gene.ident, out_gene.ident)
+                               True, False, def_mut_rate,
+                               gene_ident(), weight, i, j,
+                               new_gene.ident, out_gene.ident)
                 new_weights.append(w)
         #and lastly stick it all in the weight chromosome
         ###where?
@@ -849,11 +843,11 @@ class Genome(object):
                         for j in range(out_dict[g.out_layer].nodes):
                             w = random.gauss(0, var)
                             weight = WeightGene(random.randint(1, 5), True,
-                                                 False, def_mut_rate,
-                                                 gene_ident(),
-                                                 w, (i + g.in_node + 1),
-                                                 j, gene.ident,
-                                                 g.out_layer)
+                                                False, def_mut_rate,
+                                                gene_ident(),
+                                                w, (i + g.in_node + 1),
+                                                j, gene.ident,
+                                                g.out_layer)
                             weight_chr.insert(ind, weight)
                             ind += 1
                 done_outs.append(g.out_layer)
@@ -871,10 +865,10 @@ class Genome(object):
                         for i in range(new):
                             w = random.gauss(0, var)
                             weight = WeightGene(random.randint(1, 5), True,
-                                                 False, def_mut_rate,
-                                                 gene_ident(), w,
-                                                 g.in_node, (i + g.out_node + 1),
-                                                 g.in_layer, gene.ident)
+                                                False, def_mut_rate,
+                                                gene_ident(), w,
+                                                g.in_node, (i + g.out_node + 1),
+                                                g.in_layer, gene.ident)
                             weight_chr.insert(ind, weight)
                             ind += 1
                     if g.in_layer in done_ins.keys():
@@ -1119,7 +1113,7 @@ class LayerGene(Gene):
             change = 0
             while change == 0:
                 change = int(random.gauss(0, 1))
-                while change + self.nodes < 0:
+                while change + self.nodes < 1:
                     change += 1
             result = "Nodes, " + str(change)
         #dup
