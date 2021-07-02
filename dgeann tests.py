@@ -794,13 +794,13 @@ class testBuild(unittest.TestCase):
         self.assertAlmostEqual(data[0][0], 3.00)
         self.assertAlmostEqual(data[1][0], 3.00)
         #test where a is one longer
-        zt_genea = wg(1, False, False, 0, "abcd", 1.00, 0, 2, "data", "action")
+        zt_genea = wg(1, False, False, 0, "mnop", 1.00, 0, 2, "data", "action")
         genome_b = dgeann.Genome([], [], [zz_genea, zo_genea, zt_genea],
                     [zz_geneb, zo_geneb])
         genome_b.build_weights(active_list, net, {})
         self.assertAlmostEqual(data[2][0], 1.00)
         #test where b is one longer
-        zt_geneb = wg(1, False, False, 0, "abcd", 5.00, 0, 2, "data", "action")
+        zt_geneb = wg(1, False, False, 0, "mnop", 5.00, 0, 2, "data", "action")
         genome_c = dgeann.Genome([], [], [zz_genea, zo_genea],
                     [zz_geneb, zo_geneb, zt_geneb])
         genome_c.build_weights(active_list, net, {})
@@ -817,19 +817,18 @@ class testBuild(unittest.TestCase):
                                    [zz_geneb, oz_geneb])
         genome_e.build_weights(active_list, net, {})
         self.assertAlmostEqual(data[0][1], 5.00)
-        #test where a out gets bigger than b out
+        #test where b out gets bigger while a is at 0/0
         genome_f = dgeann.Genome([], [], [zo_genea, zz_genea, zt_genea],
                                    [zo_geneb, zt_geneb, zz_geneb])
         genome_f.build_weights(active_list, net, {})
         self.assertAlmostEqual(data[0][0], 3.00)
         data[0][0] = 7.00
-        #test where b out gets bigger than a out
+        #test where a out gets bigger while b is at 0/0
         genome_g = dgeann.Genome([], [], [zo_genea, zt_geneb, zz_genea],
                                    [zo_geneb, zz_geneb, zt_geneb])
         genome_g.build_weights(active_list, net, {})
         self.assertAlmostEqual(data[0][0], 3.00)
         data[0][0] = 7.00
-        ###TODO Note to self: add one that doesn't have a 0/0 - h, i
         #test where a goes to 0/0 while b is still going
         ff_genea = wg(1, False, False, 0, "ffga", 1.00, 5, 4, "data", "action")
         ff_geneb = wg(1, False, False, 0, "ffgb", 5.00, 5, 4, "data", "action")
@@ -1519,6 +1518,51 @@ class testRecombination(unittest.TestCase):
         self.assertEqual(cross_a.layerchr_b[4].nodes, 5)
         self.assertEqual(cross_a.weightchr_a[3].weight, 7.00)
         self.assertEqual(cross_a.weightchr_b[3].weight, 5.00)
+
+    def test_crossover_unequal(self):
+        #test case from actual data that caused bug
+        data = lg(5, False, False, 0, "data", [], 12, "input")
+        stm_input = lg(5, False, False, 0, "stm_input", [], 6, "input")
+        stm = lg(5, False, False, 0, "STM",["stm_input"], 6, "STMlayer")
+        evo = lg(3, True, False, 0.1, "evo", ["data", "STM"], 5, "IP")
+        action = lg(5, False, False, 0, "action", ["evo"], 6, "IP")
+        layers = [data, stm_input, stm, evo, action]
+        weights_a = []
+        weights_b = []
+        for i in range(12):
+            for j in range(6):
+                weights_a.append(wg(3, True, False, 0.1, str(i)+str(j),
+                                    3.0, i, j, "data", "evo"))
+        for i in range(6):
+            for j in range(6):
+                weights_a.append(wg(3, True, False, 0.1, str(i)+str(j),
+                                    3.0, i, j, "STM", "evo"))
+        for i in range(6):
+            for j in range(6):
+                weights_a.append(wg(3, True, False, 0.1, str(i)+str(j),
+                                    3.0, i, j, "evo", "action"))
+        for i in range(12):
+            for j in range(5):
+                weights_b.append(wg(3, True, False, 0.1, str(i)+str(j),
+                                    3.0, i, j, "data", "evo"))
+        for i in range(6):
+            for j in range(5):
+                weights_b.append(wg(3, True, False, 0.1, str(i)+str(j),
+                                    3.0, i, j, "STM", "evo"))
+        for i in range(5):
+            for j in range(6):
+                weights_b.append(wg(3, True, False, 0.1, str(i)+str(j),
+                                    3.0, i, j, "evo", "action"))
+        uneq = dgeann.Genome(layers, layers, weights_a, weights_b)
+        result = uneq.crossover()
+        last_in = 0
+        last_out = 0
+        i = 0
+        for j in range(12):
+            for k in range(6):
+                self.assertEqual(result.weightchr_a[i].in_node, j)
+                self.assertEqual(result.weightchr_a[i].out_node, k)
+                i += 1
         
     def test_recomb(self):
         recomb_a = self.genome_a.recombine(self.genome_a)
