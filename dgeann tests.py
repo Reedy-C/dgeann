@@ -1518,9 +1518,37 @@ class testRecombination(unittest.TestCase):
         self.assertEqual(cross_a.layerchr_b[4].nodes, 5)
         self.assertEqual(cross_a.weightchr_a[3].weight, 7.00)
         self.assertEqual(cross_a.weightchr_b[3].weight, 5.00)
+        dgeann.constrain_crossover = True
 
     def test_crossover_unequal(self):
+        #simpler test case
+        dat = lg(3, False, False, 0, "dat", [], 1, "input")
+        laya2 = lg(3, False, False, 0, "A", ["dat"], 2, "IP")
+        laya3 = lg(3, False, False, 0, "A", ["dat"], 3, "IP")
+        layb2 = lg(3, False, False, 0, "B", ["A"], 2, "IP")
+        layb3 = lg(3, False, False, 0, "B", ["A"], 3, "IP")
+        weights_0 = []
+        for i in range(3):
+            for j in range(2):
+                weights_0.append(wg(3, True, False, 0.1, str(i)+str(j),
+                                    3.0, i, j, "A", "B"))
+        weights_1 = []
+        for i in range(2):
+            for j in range(3):
+                weights_1.append(wg(3, True, False, 0.1, str(i)+str(j),
+                                    3.0, i, j, "A", "B"))
+        gen2_3 = dgeann.Genome([dat, laya2, layb3], [dat, laya2, layb3],
+                               weights_0, weights_0)
+        gen3_2 = dgeann.Genome([dat, laya3, layb2], [dat, laya3, layb2],
+                               weights_1, weights_1)
+        child = gen2_3.recombine(gen3_2)
+        child_c = child.crossover()
+        print(child_c.layerchr_a[0].nodes, child_c.layerchr_a[1].nodes,
+              child_c.layerchr_b[0].nodes, child_c.layerchr_b[1].nodes, )
+        self.assertEqual(len(child_c.weightchr_a), 9)
+        self.assertEqual(len(child_c.weightchr_b), 9)
         #test case from actual data that caused bug
+        dgeann.random.seed("genetic")
         data = lg(5, False, False, 0, "data", [], 12, "input")
         stm_input = lg(5, False, False, 0, "stm_input", [], 6, "input")
         stm = lg(5, False, False, 0, "STM",["stm_input"], 6, "STMlayer")
@@ -1554,6 +1582,7 @@ class testRecombination(unittest.TestCase):
                 weights_b.append(wg(3, True, False, 0.1, str(i)+str(j),
                                     3.0, i, j, "evo", "action"))
         uneq = dgeann.Genome(layers, layers, weights_a, weights_b)
+        print("here", dgeann.constrain_crossover)
         result = uneq.crossover()
         last_in = 0
         last_out = 0

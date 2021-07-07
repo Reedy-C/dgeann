@@ -154,6 +154,55 @@ class Genome(object):
         child = Genome(layer_one, layer_two, weight_one, weight_two)
         #now just do mutations
         child.mutate()
+##        if child.weightchr_a[34].in_node == 5 and\
+##           child.weightchr_a[34].out_node == 4:
+##            if child.weightchr_a[35].in_node == 5 and\
+##               child.weightchr_a[35].out_node == 5:
+##                if child.weightchr_b[106].in_node == 2 and\
+##                   child.weightchr_b[106].out_node == 4:
+##                    print("this should be it :|")
+##                    print("parent1 layers a")
+##                    for lay in self.layerchr_a:
+##                        print(lay.ident, lay.nodes, lay.inputs)
+##                    print("parent1 layers b")
+##                    for lay in self.layerchr_b:
+##                        print(lay.ident, lay.nodes, lay.inputs)
+##                    print("parent2 layers a")
+##                    for lay in other_genome.layerchr_a:
+##                        print(lay.ident, lay.nodes, lay.inputs)
+##                    print("parent2 layers b")
+##                    for lay in other_genome.layerchr_a:
+##                        print(lay.ident, lay.nodes, lay.inputs)
+##                    print("child layers a")
+##                    for lay in child.layerchr_a:
+##                        print(lay.ident, lay.nodes, lay.inputs)
+##                    print("child layers b")
+##                    for lay in child.layerchr_b:
+##                        print(lay.ident, lay.nodes, lay.inputs)
+##                    print("parent1 weights a")
+##                    for wei in self.weightchr_a:
+##                        print(wei.in_node, wei.out_node, wei.in_layer,
+##                              wei.out_layer)
+##                    print("parent1 weights b")
+##                    for wei in self.weightchr_b:
+##                        print(wei.in_node, wei.out_node, wei.in_layer,
+##                              wei.out_layer)
+##                    print("parent2 weights a")
+##                    for wei in other_genome.weightchr_a:
+##                        print(wei.in_node, wei.out_node, wei.in_layer,
+##                              wei.out_layer)
+##                    print("parent2 weights b")
+##                    for wei in other_genome.weightchr_b:
+##                        print(wei.in_node, wei.out_node, wei.in_layer,
+##                              wei.out_layer)
+##                    print("child weights a")
+##                    for wei in child.weightchr_a:
+##                        print(wei.in_node, wei.out_node, wei.in_layer,
+##                              wei.out_layer)
+##                    print("child weights b")
+##                    for wei in child.weightchr_b:
+##                        print(wei.in_node, wei.out_node, wei.in_layer,
+##                              wei.out_layer)
         return child
 
     def crossover(self):
@@ -166,6 +215,7 @@ class Genome(object):
         else:
             n = min(len(self.layerchr_a)-1, len(self.layerchr_b)-1)
             m = min(len(self.weightchr_a)-1, len(self.weightchr_b)-1)
+        s_diffs = self.find_size_diffs()
         lay_cross = random.randint(1, n)
         layer_a = []
         layer_b = []
@@ -177,25 +227,9 @@ class Genome(object):
             layer_b.append(self.layerchr_b[x])
         for x in range(lay_cross, len(self.layerchr_a)):
             layer_b.append(self.layerchr_a[x])
-        if m > 0:
-            weight_cross = random.randint(1, m)
-        else:
-            weight_cross = 0
-        weight_a = []
-        weight_b = []
-        for x in range(0, weight_cross):
-            self.weightchr_a[x].alt_in = self.weightchr_a[x].in_node
-            weight_a.append(self.weightchr_a[x])
-        for x in range(weight_cross, len(self.weightchr_b)):
-            self.weightchr_b[x].alt_in = self.weightchr_b[x].in_node
-            weight_a.append(self.weightchr_b[x])
-        for x in range(0, weight_cross):
-            self.weightchr_b[x].alt_in = self.weightchr_b[x].in_node
-            weight_b.append(self.weightchr_b[x])
-        for x in range(weight_cross, len(self.weightchr_a)):
-            self.weightchr_a[x].alt_in = self.weightchr_a[x].in_node
-            weight_b.append(self.weightchr_a[x])
+        weight_a, weight_b = self.cross_weights(s_diffs, m)
         result = Genome(layer_a, layer_b, weight_a, weight_b)
+        print(lay_cross, "lay cross")
         return result
 
     #helper function for crossover
@@ -222,7 +256,8 @@ class Genome(object):
                 #otherwise, it's time to break
                 #this allows for one mutation in a streak of shared ancestry
                 #but not for having a whole series of mismatches
-                if (n+1) < len(self.layerchr_a) and (n+1) < len(self.layerchr_b):
+                if (n+1) < len(self.layerchr_a) and \
+                   (n+1) < len(self.layerchr_b):
                     if self.layerchr_a[n+1].ident == self.layerchr_b[n+1].ident:
                         n += 1
                         if (self.layerchr_a[n+1].layer_type == "IP" or
@@ -245,7 +280,141 @@ class Genome(object):
             elif (self.weightchr_a[m].in_layer == last_layer or
                       self.weightchr_b[m].out_layer == last_layer):
                 break
+        print("nnmnm", n, m)
         return n, m
+
+    #helper function for crossover
+    def find_size_diffs(self):
+        """Return any shared layers between chromosomes that have different
+        defined sizes. Used to prevent weight genes getting lost.
+        """
+        n = 0
+        s_diffs = {}
+        ips = {}
+        for gen in self.layerchr_a:
+            if gen.layer_type == "IP":
+                ips[gen.ident] = gen.nodes
+        for gen in self.layerchr_b:
+            if gen.layer_type == "IP":
+                if gen.ident in ips.keys():
+                    if gen.nodes != ips[gen.ident]:
+                        s_diffs[gen.ident] = max(gen.nodes, ips[gen.ident])
+        return s_diffs
+
+    #helper function for crossover
+    def cross_weights(self, s_diffs, m):
+        """Return two crossed-over weight chromosomes.
+
+        s_diffs: dictionary of any shared layers with different sizes
+        m: crossover point
+        """
+        if m > 0:
+            weight_cross = random.randint(1, m)
+        else:
+            weight_cross = 0
+        print("weight_cross", weight_cross)
+        #if there is no difference in layer sizes, easy way
+        if s_diffs == {}:
+            weight_a, weight_b = self.cross_weights_simple(weight_cross)
+        else:
+            weight_a = self.cross_weights_comp(weight_cross, self.weightchr_a,
+                                               self.weightchr_b, s_diffs)
+            weight_b = self.cross_weights_comp(weight_cross, self.weightchr_b,
+                                               self.weightchr_a, s_diffs)
+        return weight_a, weight_b
+
+    #helper function for cross_weights
+    def cross_weights_simple(self, weight_cross):
+        """Return new crossed-over weight chromomes when doing so is simple.
+
+        weight_cross: pre-determined crossover point
+        """
+        weight_a = []
+        weight_b = []
+        for x in range(0, weight_cross):
+            self.weightchr_a[x].alt_in = self.weightchr_a[x].in_node
+            weight_a.append(self.weightchr_a[x])
+        for x in range(weight_cross, len(self.weightchr_b)):
+            self.weightchr_b[x].alt_in = self.weightchr_b[x].in_node
+            weight_a.append(self.weightchr_b[x])
+        for x in range(0, weight_cross):
+            self.weightchr_b[x].alt_in = self.weightchr_b[x].in_node
+            weight_b.append(self.weightchr_b[x])
+        for x in range(weight_cross, len(self.weightchr_a)):
+            self.weightchr_a[x].alt_in = self.weightchr_a[x].in_node
+            weight_b.append(self.weightchr_a[x])
+        return weight_a, weight_b
+
+    #helper function for cross_weights:
+    def cross_weights_comp(self, weight_cross, chr_a, chr_b, s_diffs):
+        """Return new crossed-over weight chromomes when a shared layer has
+        different lengths on either layer chromosome.
+
+        weight_cross: pre-determined crossover point
+        """
+        weights = []
+        cur_out = None
+        cur_in = None
+        #decided not to have orphaned weights w/ no genes to cover them
+        for x in range(0, weight_cross):
+            cur = chr_a[x]
+            if cur.in_node == 0 and cur.out_node == 0:
+                #if we didn't finish ins of previous layer
+                if cur_in != 0:
+                    last = chr_a[x-1]
+                    for y in range(len(chr_b)):
+                        oth = chr_b[y]
+                        if oth.in_layer == last.in_layer and \
+                           oth.out_layer == last.out_layer:
+                            if oth.in_node == last.in_node + 1:
+                                while oth.in_node <= (s_diffs[
+                                    oth.in_layer] - 1) and \
+                                    oth.in_layer == last.in_layer:
+                                   oth.alt_in = oth.in_node
+                                   weights.append(oth)
+                                   y += 1
+                                   oth = chr_b[y]
+                    cur_in = None
+                    if oth.out_layer in s_diffs.keys():
+                        if oth.out_node == (s_diffs[oth.out_layer] - 1):
+                            cur_out = None
+                    else:
+                        cur_out = None
+                #if we didn't finish outs of previous layer
+                if cur_out != None:
+                    last = chr_a[x-1]
+                    for y in range(len(chr_b)):
+                        oth = chr_b[y]
+                        if oth.in_layer == last.in_layer and \
+                           oth.out_layer == last.out_layer:
+                            if oth.in_node == last.in_node and \
+                               oth.out_node == last.out_node + 1:
+                                while oth.out_node <= (s_diffs[
+                                    oth.out_layer] - 1) and \
+                                    other.out_layer == last.out_layer:
+                                    oth.alt_in = other.in_node
+                                    weights.append(oth)
+                                    y += 1
+                                    oth = chr_b[y]
+                    cur_out = None
+            if cur.out_layer in s_diffs.keys():
+                pass
+            if cur.in_layer in s_diffs.keys():
+                pass
+            else:
+                cur.alt_in = cur.in_node
+                weights.append(cur)
+        #NTS also remember to check after end of chro
+        cur_out = 0
+        cur_in = 0
+        for x in range(weight_cross, len(chr_b)):
+            cur = chr_b[x]
+            if False:
+                pass
+            else:
+                cur.alt_in = cur.in_node
+                weights.append(cur)
+        return weights
 
     #TODO is it possible to simplify and get rid of active_list
     #   given that I now know that list(t._layer/blob_names) exists?
@@ -469,23 +638,20 @@ class Genome(object):
                     elif m > b_lim and n <= a_lim:
                         longer = weightchr_a
                 else:
-                    #currently not sure how we could get here
-                    #but might as well have a plan if we do
+                    #inputs are at the same node but outputs are not
+                    #if one is at 0/0 and the other is not:
                     if a.in_node == 0 and a.out_node == 0:
-                        while b.out_node != 0:
-                            m, b = self.read_through("b", m, active_list, net,
-                                                     sub_dict)
-                            if m > b_lim:
-                                longer = self.weightchr_a
-                                break
+                        m, b, longer = self.catch_out("b", b, b_lim, m,
+                                                      active_list, net,
+                                                      sub_dict, longer)
                     elif b.in_node == 0 and b.out_node == 0:
-                        while a.out_node != 0:
-                            n, a = self.read_through("a", n, active_list, net,
-                                                     sub_dict)
-                            if n > a_lim:
-                                longer = self.weightchr_b
-                                break
+                        n, a, longer = self.catch_out("a", a, a_lim, n,
+                                                      active_list, net,
+                                                      sub_dict, longer)
                     else:
+                        #can we get here? in nodes equal, out nodes not
+                        #but neither is at 0/0?
+                        print("somehow, got here", self.ident)
                         while a.out_node < b.out_node:
                             n, a = self.read_through("a", n, active_list, net,
                                                      sub_dict)
@@ -599,6 +765,29 @@ class Genome(object):
         if n <= (len(chro) - 1):
             a = chro[n]
         return n, a
+
+    #helper function for build_weights
+    def catch_out(self, chrom, gene, lim, pos, active_list, net, sub_dict,
+                  longer):
+        """Return current position, gene, and longer chromosome after catching
+        up when reading through genome, when inputs are equal, outputs aren't,
+        and other current gene is at 0-in 0-out.
+
+        chrom: "a" or "b"
+        gene: gene currently being read
+        lim: length limit of chromosome
+        pos: current position being read
+        """
+        while gene.out_node != 0:
+                pos, gene = self.read_through(chrom, pos, active_list, net,
+                                              sub_dict)
+                if pos > lim:
+                    if chrom == "a":
+                        longer = self.weightchr_a
+                    else:
+                        longer = self.weightchr_b
+                    break
+        return pos, gene, longer
 
     #helper function for build
     def rand_weight_genes(self, net, concat_dict):
