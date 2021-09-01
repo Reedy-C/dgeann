@@ -317,13 +317,20 @@ class Genome(object):
         """
         cur_out = None
         cur_in = None
+        out_targ = None
         if start != 0:
             alt_start, weights = self.cross_weights_altstart(start, chr_a,
                                                              chr_b, weights)
             if alt_start != None:
-                pass
+                start = alt_start
+            cur_in = weights[start - 1].in_node
+            cur_out = weights[start - 1].out_node
+            if weights[start].out_layer in s_diffs.keys():
+                find_chro_diff = True
+##                chro_diff = None
+##                nodes_diff = None
+                out_targ = s_diffs[weights[start].out_layer] - 1
         in_targ = None
-        out_targ = None
         #decided not to have orphaned weights w/ no genes to cover them
         for x in range(start, stop):
             cur = chr_a[x]
@@ -406,33 +413,60 @@ class Genome(object):
                                     if y + i + 1 > len(chr_b):
                                         break
                                 break
-                            #track difference and # additional nodes needed
-                            #for each additional x, 0
+                        if start != 0:
+                            find_chro_diff = False
                         weights.append(cur)
                         cur_in = cur.in_node
                         cur_out = cur.out_node
                 else:
                     skip = False
                     if start != 0:
+                        #do not duplicate a weight we've already done
                         if cur.in_node == weights[-1].in_node and \
                            cur.out_node == weights[-1].out_node:
                             skip = True
                     if skip == False:
                         if cur.out_node == 0 and cur.in_node != 0:
-                            if chro_diff != None:
-                                b_start = (x + chro_diff +
-                                         (nodes_diff * cur.in_node) - 1)
-                                for i in range(nodes_diff):
-                                    weights.append(chr_b[b_start + i])
-                                    if b_start + i + 1 > len(chr_b):
-                                        break
+                            #if we haven't already established chro_diff
+                            #due to starting further into the genes
+                            if start != 0:
+                                if find_chro_diff == True:
+                                    nodes_diff = out_targ - \
+                                                 chr_a[x-1].out_node
+                                    for y in range(len(chr_b)):
+                                        b_cur = chr_b[y]
+                                        if b_cur.in_layer == cur.in_layer and \
+                                           b_cur.out_layer == cur.out_layer and \
+                                           b_cur.in_node == cur.in_node - 1 and \
+                                           b_cur.out_node == chr_a[x-1].out_node + 1:
+                                            chro_diff = y - x
+                                            for i in range(nodes_diff):
+                                                weights.append(chr_b[y + i])
+                                                if y + i + 1 > len(chr_b):
+                                                    break
+                                            break
+                                    weights.append(cur)
+                                    if cur.in_node == out_targ:
+                                        cur_in = None
+                                    else:
+                                        cur_in = cur.in_node
+                                    cur_out = cur.out_node
+                                    find_chro_diff = False
                             else:
-                                weights.append(cur)
-                                if cur.in_node == out_targ:
-                                    cur_in = None
+                                if chro_diff != None:
+                                    b_start = (x + chro_diff +
+                                             (nodes_diff * cur.in_node) - 1)
+                                    for i in range(nodes_diff):
+                                        weights.append(chr_b[b_start + i])
+                                        if b_start + i + 1 > len(chr_b):
+                                            break
                                 else:
-                                    cur_in = cur.in_node
-                                cur_out = cur.out_node
+                                    weights.append(cur)
+                                    if cur.in_node == out_targ:
+                                        cur_in = None
+                                    else:
+                                        cur_in = cur.in_node
+                                    cur_out = cur.out_node
                         else:
                             weights.append(cur)
                             cur_out = cur.out_node
@@ -441,19 +475,22 @@ class Genome(object):
         if start != 0:
             #check again if we need to finish on b?
             if weights[-1].in_layer in s_diffs.keys():
+                n_node = None
                 for i in range(len(chr_b)):
                     n = chr_b[i]
                     if n.in_node > weights[-1].in_node and n.out_node == 0 \
                        and n.in_layer == weights[-1].in_layer and \
                        n.out_layer == weights[-1].out_layer:
+                        n_node = n
                         break
-                while n.in_node < s_diffs[weights[-1].in_layer]:
-                    weights.append(n)
-                    i += 1
-                    if i < len(chr_b):
-                        n = chr_b[i]
-                    else:
-                        break
+                if n_node != None:
+                    while n_node.in_node < s_diffs[weights[-1].in_layer]:
+                        weights.append(n)
+                        i += 1
+                        if i < len(chr_b):
+                            n = chr_b[i]
+                        else:
+                            break
                 #lastly, check if we need to make any extra out weights
                 if weights[-1].out_layer in s_diffs.keys():
                     lim = s_diffs[weights[-1].out_layer] - 1
@@ -472,20 +509,21 @@ class Genome(object):
 
     #helper function for cross_weights_one
     def cross_weights_altstart(self, start, chr_a, chr_b, weights):
+        """Return a possible alternate starting point and the weights genome,
+        when starting the second half of crossover for unequal chromosomes.
+        """
         #see if we need to finish something from a (now b) that is not in b
         #or adjust start
+        new_start = start
         if chr_a[start].in_layer != chr_b[start].in_layer or \
            chr_a[start].out_layer != chr_b[start].out_layer:
             #find if connection is in A (old B)
             pass
         else:
-            if chr_a[start].out_node != chr_b[start].out_node:
-                pass
             if chr_a[start].in_node > chr_b[start].in_node:
-                new_start = start
                 while chr_a[new_start].in_node != chr_b[start].in_node:
                     new_start -= 1
-                start = new_start
+                new_start += 1
             elif chr_a[start].in_node < chr_b[start].in_node:
                 new_start = start
                 while chr_a[new_start].in_node != chr_b[start].in_node:
@@ -494,8 +532,21 @@ class Genome(object):
                     else:
                         #then we might need to finish up from chr_b
                         break
-                start = new_start
-        return start, weights
+            else:
+                if chr_a[start].out_node != chr_b[start].out_node:
+                    if chr_a[start].out_node > chr_b[start].out_node:
+                        while chr_a[new_start].in_node != chr_b[start].in_node:
+                            if new_start + 1 < len(chr_a) - 1:
+                                new_start += 1
+                            else:
+                                break
+                    else:
+                        while chr_a[new_start].in_node != chr_b[start].in_node:
+                            new_start -= 1
+        if start == new_start:
+            return None, weights
+        else:
+            return new_start, weights
 
     #TODO is it possible to simplify and get rid of active_list
     #   given that I now know that list(t._layer/blob_names) exists?
@@ -732,7 +783,6 @@ class Genome(object):
                     else:
                         #can we get here? in nodes equal, out nodes not
                         #but neither is at 0/0?
-                        print("somehow, got here", self.ident)
                         while a.out_node < b.out_node:
                             n, a = self.read_through("a", n, active_list, net,
                                                      sub_dict)
