@@ -304,7 +304,6 @@ class Genome(object):
                                          [])
         weights = self.cross_weights_one(weight_cross, len(chr_b), chr_b,
                                          chr_a, s_diffs, weights)
-        #NTS also remember to check after end of chro
         return weights
     
     #helper function for cross_weights_comp
@@ -326,9 +325,9 @@ class Genome(object):
                 start = alt_start
             cur_in = weights[-1].in_node
             cur_out = weights[-1].out_node
-            if weights[-1].out_layer in s_diffs.keys():
+            if chr_a[start].out_layer in s_diffs.keys():
                 find_chro_diff = True
-                out_targ = s_diffs[weights[-1].out_layer] - 1
+                out_targ = s_diffs[chr_a[start].out_layer] - 1
         in_targ = None
         #decided not to have orphaned weights w/ no genes to cover them
         for x in range(start, stop):
@@ -412,7 +411,8 @@ class Genome(object):
                                b_cur.out_node == chr_a[x-1].out_node + 1:
                                 chro_diff = y - x
                                 for i in range(nodes_diff):
-                                    weights.append(chr_b[y + i])
+                                    if weights[-1].out_node != out_targ:
+                                                weights.append(chr_b[y + i])
                                     if y + i + 1 > len(chr_b):
                                         break
                                 break
@@ -444,17 +444,28 @@ class Genome(object):
                                        b_cur.out_node == chr_a[x-1].out_node + 1:
                                         chro_diff = y - x - (chr_a[x].in_node - 1)
                                         for i in range(nodes_diff):
-                                            weights.append(chr_b[y + i])
+                                            if weights[-1].out_node != out_targ:
+                                                weights.append(chr_b[y + i])
                                             if y + i + 1 > len(chr_b):
                                                 break
                                         break
-                                weights.append(cur)
                                 if cur.in_node == out_targ:
                                     cur_in = None
                                 else:
                                     cur_in = cur.in_node
                                 cur_out = cur.out_node
                                 find_chro_diff = False
+                                #...and check to make sure we don't need to
+                                #finish from *a*
+                                if chro_diff == None:
+                                    if weights[-1].out_node < out_targ:
+                                        search = x
+                                        while chr_a[search].out_node != out_targ:
+                                            search -= 1
+                                        while search != x:
+                                            weights.append(chr_a[search])
+                                            search += 1
+                                weights.append(cur)
                             else:
                                 if chro_diff != None:
                                     b_start = (x + chro_diff +
@@ -522,32 +533,76 @@ class Genome(object):
         if chr_a[start].in_layer != chr_b[start].in_layer or \
            chr_a[start].out_layer != chr_b[start].out_layer:
             #find if connection is in A (old B)
-            pass
-        else:
-            if chr_a[start].in_node > chr_b[start].in_node:
-                while chr_a[new_start].in_node != chr_b[start].in_node:
-                    new_start -= 1
-                while chr_a[new_start].out_node > chr_b[start].out_node:
-                    new_start -= 1
-            elif chr_a[start].in_node < chr_b[start].in_node:
-                new_start = start
-                while chr_a[new_start].in_node != chr_b[start].in_node:
+            if chr_a[start].in_layer == chr_b[start].out_layer:
+                #then we need to move back
+                while chr_a[new_start].in_layer != chr_b[start].in_layer or \
+                      chr_a[new_start].out_layer != chr_b[start].out_layer:
+                        if new_start - 1 > 0:
+                            new_start -= 1
+                        else:
+                            #probably not on this chro
+                            new_start = start
+                            break
+            elif chr_a[start].out_layer == chr_b[start].in_layer:
+                #then we need to move forward
+                while chr_a[new_start].in_layer != chr_b[start].in_layer or \
+                      chr_a[new_start].out_layer != chr_b[start].out_layer:
                     if new_start + 1 < len(chr_a) - 1:
                         new_start += 1
                     else:
-                        #then we might need to finish up from chr_b
+                        #probably not on this chro
+                        new_start = start
                         break
             else:
-                if chr_a[start].out_node != chr_b[start].out_node:
-                    if chr_a[start].out_node > chr_b[start].out_node:
-                        while chr_a[new_start].in_node != chr_b[start].in_node:
-                            if new_start + 1 < len(chr_a) - 1:
-                                new_start += 1
-                            else:
-                                break
+                #start going forward, loop if necessary
+                if new_start + 1 < len(chr_a) - 1:
+                    new_start += 1
+                    while chr_a[new_start].in_layer != chr_b[start].in_layer or \
+                      chr_a[new_start].out_layer != chr_b[start].out_layer:
+                        if new_start + 1 < len(chr_a) - 1:
+                            new_start += 1
+                        elif new_start == start:
+                            #not found
+                            break
+                        else:
+                            new_start = 0
+        if chr_a[new_start].in_node > chr_b[start].in_node:
+            while chr_a[new_start].in_node != chr_b[start].in_node:
+                new_start -= 1
+            while chr_a[new_start].out_node > chr_b[start].out_node:
+                new_start -= 1
+        elif chr_a[new_start].in_node < chr_b[start].in_node:
+            while chr_a[new_start].in_node != chr_b[start].in_node:
+                if new_start + 1 < len(chr_a) - 1:
+                    new_start += 1
+                else:
+                    #then we might need to finish up from chr_b
+                    break
+            x_start = new_start
+            while chr_a[x_start].out_node < weights[-1].out_node:
+                if chr_a[x_start].in_node != weights[-1].in_node:
+                    x_start = new_start
+                    break
+                else:
+                    if x_start + 1 < len(chr_a) - 1:
+                        x_start += 1
                     else:
-                        while chr_a[new_start].in_node != chr_b[start].in_node:
-                            new_start -= 1
+                        break
+            if  x_start + 1 < len(chr_a) - 1 and \
+                chr_a[x_start + 1].out_node == weights[-1].out_node + 1:
+                x_start += 1
+            new_start = x_start
+        else:
+            if chr_a[start].out_node != chr_b[start].out_node:
+                if chr_a[start].out_node < chr_b[start].out_node:
+                    while chr_a[new_start].out_node != chr_b[start].out_node:
+                        if new_start + 1 < len(chr_a) - 1:
+                            new_start += 1
+                        else:
+                            break
+                else:
+                    while chr_a[new_start].out_node != chr_b[start].out_node:
+                        new_start -= 1
         if start == new_start:
             return None, weights
         else:
