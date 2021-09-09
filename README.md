@@ -7,6 +7,6 @@ Networks in DGEANN consist of one pair of chromosomes that control the network l
 * turn a network with randomized weights into a genome
 * turn a defined genome into a complete network
 * evolve both layer structures and weight values
-* perform recombination, crossing over an individual parent's pairs of chromosomes at one random point
+* perform recombination, crossing over an individual parent's pairs of chromosomes at a random point
 
-Test coverage is currently 94%.
+Test coverage is currently 93%.
