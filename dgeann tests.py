@@ -1674,6 +1674,7 @@ class testRecombination(unittest.TestCase):
                 self.assertEqual(result2.weightchr_b[i].in_node, j)
                 self.assertEqual(result2.weightchr_b[i].out_node, k)
                 i += 1
+        #ran this through about 50 more random seeds to check for bugs
         dgeann.random.seed(522273)
         uneq3 = dgeann.Genome(layers2, layers, weights_a, weights_b)
         result3 = uneq3.crossover()
@@ -1750,7 +1751,7 @@ class testRecombination(unittest.TestCase):
                 i += 1
         dgeann.random.seed(243883)
         uneq5 = dgeann.Genome(layers2, layers, weights_a, weights_b)
-        result5 = uneq2.crossover()
+        result5 = uneq5.crossover()
         last_in = 0
         last_out = 0
         i = 0
@@ -1784,6 +1785,117 @@ class testRecombination(unittest.TestCase):
             for k in range(6):
                 self.assertEqual(result5.weightchr_b[i].in_node, j)
                 self.assertEqual(result5.weightchr_b[i].out_node, k)
+                i += 1
+        dgeann.random.seed(732955)
+        uneq6 = dgeann.Genome(layers2, layers, weights_a, weights_b)
+        result6 = uneq6.crossover()
+        last_in = 0
+        last_out = 0
+        i = 0
+        for j in range(12):
+            for k in range(6):
+                self.assertEqual(result6.weightchr_a[i].in_node, j)
+                self.assertEqual(result6.weightchr_a[i].out_node, k)
+                i += 1
+        for j in range(6):
+            for k in range(6):
+                self.assertEqual(result6.weightchr_a[i].in_node, j)
+                self.assertEqual(result6.weightchr_a[i].out_node, k)
+                i += 1
+        for j in range(6):
+            for k in range(6):
+                self.assertEqual(result6.weightchr_a[i].in_node, j)
+                self.assertEqual(result6.weightchr_a[i].out_node, k)
+                i += 1
+        i = 0
+        for j in range(12):
+            for k in range(6):
+                self.assertEqual(result6.weightchr_b[i].in_node, j)
+                self.assertEqual(result6.weightchr_b[i].out_node, k)
+                i += 1
+        for j in range(6):
+            for k in range(6):
+                self.assertEqual(result6.weightchr_b[i].in_node, j)
+                self.assertEqual(result6.weightchr_b[i].out_node, k)
+                i += 1
+        for j in range(6):
+            for k in range(6):
+                self.assertEqual(result6.weightchr_b[i].in_node, j)
+                self.assertEqual(result6.weightchr_b[i].out_node, k)
+                i += 1
+        dgeann.random.seed(123038)
+        uneq7 = dgeann.Genome(layers2, layers, weights_a, weights_b)
+        result7 = uneq7.crossover()
+        last_in = 0
+        last_out = 0
+        i = 0
+        for j in range(12):
+            for k in range(6):
+                self.assertEqual(result7.weightchr_a[i].in_node, j)
+                self.assertEqual(result7.weightchr_a[i].out_node, k)
+                i += 1
+        for j in range(6):
+            for k in range(6):
+                self.assertEqual(result7.weightchr_a[i].in_node, j)
+                self.assertEqual(result7.weightchr_a[i].out_node, k)
+                i += 1
+        for j in range(6):
+            for k in range(6):
+                self.assertEqual(result7.weightchr_a[i].in_node, j)
+                self.assertEqual(result7.weightchr_a[i].out_node, k)
+                i += 1
+        i = 0
+        for j in range(12):
+            for k in range(6):
+                self.assertEqual(result7.weightchr_b[i].in_node, j)
+                self.assertEqual(result7.weightchr_b[i].out_node, k)
+                i += 1
+        for j in range(6):
+            for k in range(6):
+                self.assertEqual(result7.weightchr_b[i].in_node, j)
+                self.assertEqual(result7.weightchr_b[i].out_node, k)
+                i += 1
+        for j in range(6):
+            for k in range(6):
+                self.assertEqual(result7.weightchr_b[i].in_node, j)
+                self.assertEqual(result7.weightchr_b[i].out_node, k)
+                i += 1
+        dgeann.random.seed(412981)
+        uneq8 = dgeann.Genome(layers2, layers, weights_a, weights_b)
+        result8 = uneq8.crossover()
+        last_in = 0
+        last_out = 0
+        i = 0
+        for j in range(12):
+            for k in range(6):
+                self.assertEqual(result8.weightchr_a[i].in_node, j)
+                self.assertEqual(result8.weightchr_a[i].out_node, k)
+                i += 1
+        for j in range(6):
+            for k in range(6):
+                self.assertEqual(result8.weightchr_a[i].in_node, j)
+                self.assertEqual(result8.weightchr_a[i].out_node, k)
+                i += 1
+        for j in range(6):
+            for k in range(6):
+                self.assertEqual(result8.weightchr_a[i].in_node, j)
+                self.assertEqual(result8.weightchr_a[i].out_node, k)
+                i += 1
+        i = 0
+        for j in range(12):
+            for k in range(6):
+                self.assertEqual(result8.weightchr_b[i].in_node, j)
+                self.assertEqual(result8.weightchr_b[i].out_node, k)
+                i += 1
+        for j in range(6):
+            for k in range(6):
+                self.assertEqual(result8.weightchr_b[i].in_node, j)
+                self.assertEqual(result8.weightchr_b[i].out_node, k)
+                i += 1
+        for j in range(6):
+            for k in range(6):
+                self.assertEqual(result8.weightchr_b[i].in_node, j)
+                self.assertEqual(result8.weightchr_b[i].out_node, k)
                 i += 1
         
     def test_recomb(self):
